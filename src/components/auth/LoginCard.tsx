@@ -2,6 +2,7 @@
 
 import { FormEvent } from 'react';
 import GoogleIcon from '@/components/icons/GoogleIcon';
+import Link from 'next/link';
 
 export default function LoginCard() {
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
@@ -55,7 +56,9 @@ export default function LoginCard() {
             className="w-full bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-700 dark:focus:ring-teal-500 transition-all placeholder-gray-300 dark:placeholder-gray-500"
             required
           />
+          <Link href={"/forgetpassword"} className='mt-8 underline text-teal-700 hover:text-teal-800 dark:text-teal-500 dark:hover:text-teal-600'>ลืมรหัสผ่าน ?</Link>
         </div>
+        
 
         <button
           type="submit"
@@ -83,12 +86,12 @@ export default function LoginCard() {
 
       <div className="mt-8 text-center text-sm text-gray-600 dark:text-gray-400">
         Don&apos;t have an account?
-        <a
+        <Link
           href="/signup"
           className="text-teal-700 dark:text-teal-500 hover:text-teal-800 dark:hover:text-teal-600 font-medium ml-1"
         >
           Sign up
-        </a>
+        </Link>
       </div>
     </div>
   );
