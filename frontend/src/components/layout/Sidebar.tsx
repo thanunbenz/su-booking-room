@@ -12,14 +12,14 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   return (
     <aside
       className={`fixed top-0 left-0 bottom-0 bg-teal-700 dark:bg-teal-800 text-white w-64 flex flex-col z-50
-        transition-transform duration-300 ease-in-out shadow-2xl rounded-r-2xl
+        transition-transform duration-300 ease-in-out shadow-2xl rounded-r-2xl 
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}
     >
       <div className="h-16 flex items-center justify-between px-4 border-b border-teal-600 dark:border-teal-700">
         <h1 className="text-xl font-medium">ระบบจองห้องเรียน</h1>
         <button
           onClick={onClose}
-          className="text-white hover:text-gray-200 focus:outline-none transition-colors"
+          className="text-white hover:text-gray-200 focus:outline-none transition-colors cursor-pointer"
           aria-label="Close sidebar"
         >
           <FaTimes className="text-xl" />

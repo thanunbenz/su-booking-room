@@ -37,7 +37,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
       <div className="flex items-center gap-4">
         <button
           onClick={onMenuClick}
-          className="text-teal-700 dark:text-teal-400 text-xl hover:text-teal-900 dark:hover:text-teal-300 focus:outline-none transition-colors"
+          className="text-teal-700 dark:text-teal-400 text-xl hover:text-teal-900 dark:hover:text-teal-300 focus:outline-none transition-colors cursor-pointer"
           aria-label="Open menu"
         >
           <FaBars />
