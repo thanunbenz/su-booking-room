@@ -7,13 +7,13 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
-	"github.com/thanunbenz/su-booking-room/configs/database"
+	"github.com/thanunbenz/su-booking-room/internal/config"
 	"github.com/thanunbenz/su-booking-room/internal/routes"
 )
 
 func main() {
 	app := fiber.New()
-	database.ConnectDB()
+	config.ConnectDB()
 	// Middleware
 	app.Use(logger.New())
 	app.Use(cors.New())

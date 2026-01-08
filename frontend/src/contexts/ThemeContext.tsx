@@ -26,7 +26,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         document.documentElement.classList.add('dark');
       } else {
         document.documentElement.classList.remove('dark');
-        doc
       }
     } else {
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;

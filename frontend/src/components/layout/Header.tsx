@@ -57,7 +57,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
               e.stopPropagation();
               setIsDropdownOpen(!isDropdownOpen);
             }}
-            className="flex items-center justify-center text-teal-700 dark:text-teal-400 hover:text-teal-800 dark:hover:text-teal-300 focus:outline-none transition-transform hover:scale-105"
+            className="flex items-center justify-center text-teal-700 dark:text-teal-400 hover:text-teal-800 dark:hover:text-teal-300 focus:outline-none transition-transform hover:scale-105 cursor-pointer"
             aria-label="Profile menu"
           >
             <FaUserCircle className="text-4xl" />
@@ -66,24 +66,24 @@ export default function Header({ onMenuClick }: HeaderProps) {
           {isDropdownOpen && (
             <div
               ref={dropdownRef}
-              className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden z-30 origin-top-right"
+              className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden z-30 origin-top-right animate-dropdown-fade-in"
             >
               <div className="py-1">
                 <Link
                   href="/profile"
-                  className="block px-4 py-3 text-sm text-teal-700 dark:text-teal-400 hover:bg-teal-700 hover:text-white dark:hover:bg-teal-600 transition-colors border-b border-gray-100 dark:border-gray-700 text-center"
+                  className="block px-4 py-3 text-sm text-teal-700 dark:text-teal-400 hover:bg-teal-700 hover:text-white dark:hover:bg-teal-600 transition-colors border-b border-gray-100 dark:border-gray-700 text-center cursor-pointer"
                 >
                   ผู้ใช้โปรไฟล์
                 </Link>
                 <Link
                   href="/booking"
-                  className="block px-4 py-3 text-sm text-teal-700 dark:text-teal-400 hover:bg-teal-700 hover:text-white dark:hover:bg-teal-600 transition-colors border-b border-gray-100 dark:border-gray-700 text-center"
+                  className="block px-4 py-3 text-sm text-teal-700 dark:text-teal-400 hover:bg-teal-700 hover:text-white dark:hover:bg-teal-600 transition-colors border-b border-gray-100 dark:border-gray-700 text-center cursor-pointer"
                 >
                   จองห้องเรียน
                 </Link>
                 <Link
                   href="/logout"
-                  className="block px-4 py-3 text-sm text-teal-700 dark:text-teal-400 hover:bg-teal-700 hover:text-white dark:hover:bg-teal-600 transition-colors text-center"
+                  className="block px-4 py-3 text-sm text-teal-700 dark:text-teal-400 hover:bg-teal-700 hover:text-white dark:hover:bg-teal-600 transition-colors text-center cursor-pointer"
                 >
                   ออกจากระบบ
                 </Link>

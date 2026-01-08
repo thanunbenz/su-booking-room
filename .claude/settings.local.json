@@ -3,7 +3,17 @@
     "allow": [
       "Bash(mkdir:*)",
       "Bash(npm install:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(go mod tidy:*)",
+      "Bash(go build:*)",
+      "Bash(go clean:*)",
+      "Bash(go mod download:*)",
+      "Bash(make help:*)",
+      "Bash(ls:*)",
+      "Bash(docker compose:*)",
+      "Bash(docker volume ls:*)",
+      "Bash(docker volume rm:*)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []
