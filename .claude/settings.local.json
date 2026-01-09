@@ -13,7 +13,8 @@
       "Bash(docker compose:*)",
       "Bash(docker volume ls:*)",
       "Bash(docker volume rm:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(tree:*)"
     ],
     "deny": [],
     "ask": []
