@@ -26,20 +26,23 @@
                              ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                    Backend (Go + Fiber v2)                       │
+│              2-Layer Architecture (Express.js style)             │
 │  ┌────────────────────────────────────────────────────────────┐ │
 │  │ HTTP Layer (Fiber)                                         │ │
 │  │  ├── Routes (internal/routes)                              │ │
-│  │  ├── Handlers (internal/handlers)                          │ │
-│  │  └── Middleware (CORS, Logger)                             │ │
-│  ├────────────────────────────────────────────────────────────┤ │
-│  │ Business Logic                                             │ │
-│  │  └── Services (internal/services)                          │ │
+│  │  ├── Handlers (internal/handlers) - MVC Controllers        │ │
+│  │  │   ├── auth_handler.go                            │ │
+│  │  │   ├── building_handler.go                        │ │
+│  │  │   └── room_handler.go                            │ │
+│  │  └── Middleware (Auth, Role, Logger, Error)                │ │
 │  ├────────────────────────────────────────────────────────────┤ │
 │  │ Data Layer                                                 │ │
 │  │  ├── Models (internal/models) - GORM                       │ │
-│  │  ├── Repositories (internal/repositories)                  │ │
-│  │  └── Database Config (internal/config)                     │ │
+│  │  ├── Database Config (internal/config)                     │ │
+│  │  ├── Utils (JWT, Password, Validator, Response)            │ │
+│  │  └── Seeder (Default roles & admin)                        │ │
 │  └────────────────────────────────────────────────────────────┘ │
+│  Handler → Database (ไม่ผ่าน Service/Repository)                │
 │                      Port: 8000                                  │
 └────────────────────────────┬────────────────────────────────────┘
                              │
@@ -116,7 +119,7 @@ su-booking-room/
 │   ├── MAKEFILE_CHEATSHEET.md      # Quick reference
 │   └── ARCHITECTURE.md             # This file
 │
-├── 🔧 Backend (Go)
+├── 🔧 Backend (Go) - Simplified 2-Layer Architecture
 │   ├── Dockerfile                  # Multi-stage build
 │   ├── .dockerignore
 │   ├── go.mod / go.sum            # Dependencies
@@ -135,18 +138,34 @@ su-booking-room/
 │   │   │   ├── fixed_schedule.go
 │   │   │   └── notification.go
 │   │   │
-│   │   ├── handlers/              # HTTP Handlers
-│   │   │   └── health_handler.go
+│   │   ├── handlers/              # HTTP Handlers (MVC style)
+│   │   │   ├── auth_handler.go       # Login, Register, GetMe
+│   │   │   ├── building_handler.go   # Buildings CRUD
+│   │   │   ├── room_handler.go       # Rooms CRUD
+│   │   │   └── health_handler.go            # Health check
 │   │   │
 │   │   ├── routes/                # API Routes
 │   │   │   └── routes.go
 │   │   │
-│   │   ├── services/              # Business Logic
-│   │   ├── repositories/          # Data Access
 │   │   ├── middleware/            # Middlewares
-│   │   └── utils/                 # Utilities
+│   │   │   ├── auth.go            # JWT authentication
+│   │   │   ├── role.go            # Role-based access
+│   │   │   ├── error.go           # Error handling
+│   │   │   └── logger.go          # Request logging
+│   │   │
+│   │   ├── utils/                 # Utilities
+│   │   │   ├── jwt.go             # JWT tokens
+│   │   │   ├── password.go        # Bcrypt hashing
+│   │   │   ├── response.go        # Standard responses
+│   │   │   └── validator.go       # Request validation
+│   │   │
+│   │   └── seed/                  # Database seeder
+│   │       └── seeder.go          # Default data (roles, admin)
 │   │
-│   └── cmd/                       # CLI commands
+│   └── docs/                      # Backend documentation
+│       ├── ARCHITECTURE_SIMPLE.md
+│       ├── REFACTOR_COMPARISON.md
+│       └── QUICK_START_SIMPLE.md
 │
 └── 🎨 Frontend (Next.js)
     ├── Dockerfile                 # Multi-stage build
@@ -180,7 +199,7 @@ su-booking-room/
 
 ## Data Flow
 
-### 1. User Authentication Flow
+### 1. User Authentication Flow (Simplified)
 ```
 User ──┐
        │ 1. Login Request
@@ -188,51 +207,62 @@ User ──┐
     Frontend ──┐
                │ 2. POST /api/auth/login
                ▼
-            Backend ──┐
-                      │ 3. Validate credentials
-                      │ 4. Query users table
+            Backend Handler (auth_handler.go) ──┐
+                      │ 3. Parse & validate request
+                      │ 4. Query users table (GORM)
                       ▼
                    Database
                       │
                       │ 5. Return user data
                       ▼
-            Backend ──┘
-               │ 6. Generate token
-               │ 7. Return response
+            Backend Handler ──┘
+               │ 6. Check password (bcrypt)
+               │ 7. Generate JWT tokens
+               │ 8. Return response
                ▼
     Frontend ──┘
-       │ 8. Store token
-       │ 9. Redirect to dashboard
+       │ 9. Store tokens in localStorage
+       │ 10. Redirect to dashboard
        ▼
     User
+
+⚡ โครงสร้างง่าย: Handler ทำทุกอย่าง (parse, validate, query, response)
+   ไม่ต้องผ่าน Service หรือ Repository layer
 ```
 
-### 2. Booking Creation Flow
+### 2. Building Management Flow (Simplified)
 ```
-User ──┐
-       │ 1. Fill booking form
-       ▼
-    Frontend ──┐
-               │ 2. POST /api/bookings
-               │    (with auth token)
-               ▼
-            Backend ──┐
-                      │ 3. Validate token
-                      │ 4. Check room availability
-                      │ 5. Create booking record
-                      ▼
-                   Database
-                      │
-                      │ 6. Insert to bookings table
-                      │ 7. Create notification
-                      ▼
-            Backend ──┘
-               │ 8. Return booking data
-               ▼
-    Frontend ──┘
-       │ 9. Show success message
-       ▼
-    User
+User (Admin) ──┐
+                │ 1. Create building form
+                ▼
+            Frontend ──┐
+                       │ 2. POST /api/v1/buildings
+                       │    (with JWT token)
+                       ▼
+                    Middleware ──┐
+                                 │ 3. Verify JWT token
+                                 │ 4. Check admin role
+                                 ▼
+                    Backend Handler (building_handler.go) ──┐
+                                 │ 5. Parse & validate request
+                                 │ 6. Check duplicate name
+                                 │ 7. Insert to buildings table
+                                 ▼
+                              Database
+                                 │
+                                 │ 8. Return created building
+                                 ▼
+                    Backend Handler ──┘
+                       │ 9. Format response
+                       ▼
+            Frontend ──┘
+                │ 10. Show success message
+                │ 11. Refresh building list
+                ▼
+    User (Admin)
+
+⚡ Simple CRUD: Handler → Database โดยตรง
+   Middleware ตรวจสอบ Auth & Role ก่อนถึง Handler
 ```
 
 ---
@@ -508,5 +538,36 @@ Developer ──┐
 
 ---
 
-**อัพเดทล่าสุด:** 2026-01-08
-**Version:** 1.0.0
+## Backend Architecture Decision
+
+### ทำไมเลือกใช้ 2-Layer Architecture?
+
+#### เหตุผลหลัก
+1. **เรียนรู้ง่าย** - เหมาะกับผู้เริ่มต้นศึกษา Go + Fiber
+2. **พัฒนาเร็ว** - CRUD ง่ายๆ ไม่ต้องสร้างหลาย layer
+3. **Code น้อย** - ลด boilerplate code ลง 75%
+4. **Maintainable** - โปรเจกต์ขนาดเล็ก-กลาง เหมาะกับ 2 layers
+
+#### สถิติการ Refactor
+```
+Before (3 layers):           After (2 layers):
+- 12 ไฟล์                    - 3 ไฟล์ (-75%)
+- ~1,200 บรรทัด               - ~400 บรรทัด (-67%)
+- Handler→Service→Repo        - Handler→Database
+```
+
+#### เมื่อไหร่ควรย้ายไปใช้ 3-Layer?
+- Business logic ซับซ้อน มีหลายขั้นตอน
+- ต้อง reuse logic ในหลายที่
+- มีหลาย data sources (PostgreSQL + Redis + APIs)
+- ทีมใหญ่ ต้องการ strict separation of concerns
+
+### ข้อมูลเพิ่มเติม
+- **[ARCHITECTURE_SIMPLE.md](../../backend/ARCHITECTURE_SIMPLE.md)** - อธิบายโครงสร้างแบบละเอียด
+- **[REFACTOR_COMPARISON.md](../../backend/REFACTOR_COMPARISON.md)** - เปรียบเทียบ Before/After
+- **[QUICK_START_SIMPLE.md](../../backend/QUICK_START_SIMPLE.md)** - คู่มือเริ่มต้น + สร้าง feature
+
+---
+
+**อัพเดทล่าสุด:** 2026-01-14
+**Version:** 2.0.0 (Refactored to 2-Layer Architecture)

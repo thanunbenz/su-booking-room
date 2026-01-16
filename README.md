@@ -162,11 +162,16 @@ su-booking-room/
 ├── backend/
 │   ├── internal/
 │   │   ├── config/          # Database config
-│   │   ├── handlers/        # HTTP handlers
-│   │   ├── models/          # Database models
+│   │   ├── handlers/        # HTTP handlers (แบบง่าย - MVC style)
+│   │   │   ├── auth_handler.go
+│   │   │   ├── building_handler.go
+│   │   │   ├── room_handler.go
+│   │   │   └── health_handler.go
+│   │   ├── models/          # Database models (GORM)
 │   │   ├── routes/          # API routes
-│   │   ├── services/        # Business logic
-│   │   └── middleware/      # Middlewares
+│   │   ├── middleware/      # Auth & Role middlewares
+│   │   ├── utils/           # JWT, Password, Validator, Response
+│   │   └── seed/            # Database seeder
 │   ├── Dockerfile
 │   └── main.go
 ├── frontend/
@@ -175,6 +180,10 @@ su-booking-room/
 │   │   └── components/     # React components
 │   ├── Dockerfile
 │   └── package.json
+├── docs/                    # Documentation
+│   ├── guides/
+│   ├── planning/
+│   └── architecture/
 ├── docker-compose.yml
 ├── Makefile
 └── README.md

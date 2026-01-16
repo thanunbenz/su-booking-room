@@ -11,6 +11,9 @@ type User struct {
 	Password  string    `gorm:"type:varchar(255);not null" json:"-"` // ไม่ส่งกลับใน JSON
 	CreatedAt time.Time `gorm:"default:now()" json:"created_at"`
 	UpdatedAt time.Time `gorm:"default:now()" json:"updated_at"`
+
+	// Relation
+	Role Role `gorm:"foreignKey:RoleID;references:RoleID" json:"role"`
 }
 
 func (User) TableName() string {

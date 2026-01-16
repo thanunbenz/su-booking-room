@@ -36,6 +36,7 @@ services:
       DB_USER: sumbenz
       DB_PASSWORD: sumbenz2806
       DB_NAME: su_booking_room
+      JWT_SECRET: su-booking-room-jwt-secret-key-change-in-production
       PORT: 8000
       TZ: Asia/Bangkok
     depends_on:

@@ -56,13 +56,34 @@ func ConnectDB() {
 
 // AutoMigrate runs database migrations for all models
 func AutoMigrate() error {
-	return DB.AutoMigrate(
-		&models.Role{},
-		&models.User{},
-		&models.Building{},
-		&models.Room{},
-		&models.Booking{},
-		&models.FixedSchedule{},
-		&models.Notification{},
-	)
+	// Migrate ตามลำดับ: parent tables ก่อน
+	if err := DB.AutoMigrate(&models.Role{}); err != nil {
+		return err
+	}
+
+	if err := DB.AutoMigrate(&models.User{}); err != nil {
+		return err
+	}
+
+	if err := DB.AutoMigrate(&models.Building{}); err != nil {
+		return err
+	}
+
+	if err := DB.AutoMigrate(&models.Room{}); err != nil {
+		return err
+	}
+
+	if err := DB.AutoMigrate(&models.FixedSchedule{}); err != nil {
+		return err
+	}
+
+	if err := DB.AutoMigrate(&models.Booking{}); err != nil {
+		return err
+	}
+
+	if err := DB.AutoMigrate(&models.Notification{}); err != nil {
+		return err
+	}
+
+	return nil
 }

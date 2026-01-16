@@ -9,6 +9,9 @@ type Room struct {
 	Capacity    int       `gorm:"default:0" json:"capacity"`
 	Description string    `gorm:"type:text" json:"description"`
 	CreatedAt   time.Time `gorm:"default:now()" json:"created_at"`
+
+	// Relation
+	Building Building `gorm:"foreignKey:BuildingID;references:BuildingID" json:"building"`
 }
 
 func (Room) TableName() string {
