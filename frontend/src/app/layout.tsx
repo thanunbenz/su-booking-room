@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Sarabun } from "next/font/google";
+import { Providers } from "@/components/Providers";
 import "./globals.css";
 
 const sarabun = Sarabun({
@@ -25,7 +26,9 @@ export default function RootLayout({
         className={`${sarabun.variable} font-sans antialiased`}
         style={{ fontFamily: 'var(--font-sarabun), sans-serif' }}
       >
-        {children}
+        <Providers>
+          {children}
+        </Providers>
       </body>
     </html>
   );
