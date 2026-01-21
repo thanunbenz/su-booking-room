@@ -23,6 +23,7 @@ up: ## Start all services with Docker Compose
 	@echo "$(YELLOW)Frontend: http://localhost:3000$(NC)"
 	@echo "$(YELLOW)Backend:  http://localhost:8000$(NC)"
 	@echo "$(YELLOW)Database: localhost:5432$(NC)"
+	@echo "$(YELLOW)Database Admin: http://localhost:5050$(NC)"
 
 down: ## Stop all services
 	@echo "$(BLUE)Stopping all services...$(NC)"

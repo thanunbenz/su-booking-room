@@ -7,8 +7,8 @@ type FixedSchedule struct {
 	Subject     string `gorm:"type:varchar(255);not null" json:"subject"`
 	TeacherName string `gorm:"type:varchar(255)" json:"teacher_name"`
 	DayOfWeek   int    `gorm:"not null;index:idx_room_day_time" json:"day_of_week"` // 1=Mon, 2=Tue, ..., 7=Sun
-	StartTime   string `gorm:"type:time;not null;index:idx_room_day_time" json:"start_time"`
-	EndTime     string `gorm:"type:time;not null" json:"end_time"`
+	StartTime   string `gorm:"type:varchar(8);not null;index:idx_room_day_time" json:"start_time"` // HH:MM or HH:MM:SS
+	EndTime     string `gorm:"type:varchar(8);not null" json:"end_time"` // HH:MM or HH:MM:SS
 	Semester    string `gorm:"type:varchar(20)" json:"semester"` // เช่น 1/2567
 }
 

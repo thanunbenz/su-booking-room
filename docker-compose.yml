@@ -21,6 +21,26 @@ services:
     networks:
       - su-booking-network
 
+  # pgAdmin - PostgreSQL Management Tool
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: su-booking-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@su.ac.th
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      TZ: Asia/Bangkok
+    ports:
+      - "5050:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - su-booking-network
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+
   # Backend (Go + Fiber)
   backend:
     build:
@@ -71,4 +91,6 @@ networks:
 
 volumes:
   postgres_data:
+    driver: local
+  pgadmin_data:
     driver: local

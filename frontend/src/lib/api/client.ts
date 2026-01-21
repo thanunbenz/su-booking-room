@@ -15,6 +15,10 @@ import type {
   Room,
   CreateRoomRequest,
   UpdateRoomRequest,
+  FixedSchedule,
+  CreateScheduleRequest,
+  UpdateScheduleRequest,
+  BulkCreateScheduleRequest,
 } from './types'
 
 // Base URL
@@ -33,9 +37,9 @@ async function apiCall<T>(
 ): Promise<ApiResponse<T>> {
   const token = getToken()
 
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...options.headers,
+    ...(options.headers as Record<string, string>),
   }
 
   if (token) {
@@ -53,7 +57,7 @@ async function apiCall<T>(
     throw data as ApiError
   }
 
-  return data
+  return data as ApiResponse<T>
 }
 
 // ===================================
@@ -106,6 +110,13 @@ export const buildingApi = {
    */
   getById: async (id: number): Promise<ApiResponse<Building>> => {
     return apiCall(`/buildings/${id}`)
+  },
+
+    /**
+   * Get building name by ID
+   */
+  getByNameById: async (id: number): Promise<ApiResponse<Building>> => {
+    return apiCall(`/buildings/${id}/name`)
   },
 
   /**
@@ -190,6 +201,95 @@ export const roomApi = {
   delete: async (id: number): Promise<ApiResponse<null>> => {
     return apiCall(`/rooms/${id}`, {
       method: 'DELETE',
+    })
+  },
+}
+
+// ===================================
+// Fixed Schedule API
+// ===================================
+
+export const scheduleApi = {
+  /**
+   * Get all schedules
+   */
+  getAll: async (params?: {
+    room_id?: number
+    day_of_week?: number
+    semester?: string
+  }): Promise<ApiResponse<FixedSchedule[]>> => {
+    const queryParams = new URLSearchParams()
+    if (params?.room_id) queryParams.append('room_id', params.room_id.toString())
+    if (params?.day_of_week) queryParams.append('day_of_week', params.day_of_week.toString())
+    if (params?.semester) queryParams.append('semester', params.semester)
+
+    const query = queryParams.toString()
+    return apiCall(`/schedules${query ? `?${query}` : ''}`)
+  },
+
+  /**
+   * Get schedule by ID
+   */
+  getById: async (id: number): Promise<ApiResponse<FixedSchedule>> => {
+    return apiCall(`/schedules/${id}`)
+  },
+
+  /**
+   * Get schedules by room ID
+   */
+  getByRoomId: async (
+    roomId: number,
+    params?: { day_of_week?: number; semester?: string }
+  ): Promise<ApiResponse<FixedSchedule[]>> => {
+    const queryParams = new URLSearchParams()
+    if (params?.day_of_week) queryParams.append('day_of_week', params.day_of_week.toString())
+    if (params?.semester) queryParams.append('semester', params.semester)
+
+    const query = queryParams.toString()
+    return apiCall(`/rooms/${roomId}/schedules${query ? `?${query}` : ''}`)
+  },
+
+  /**
+   * Create new schedule (Admin only)
+   */
+  create: async (data: CreateScheduleRequest): Promise<ApiResponse<FixedSchedule>> => {
+    return apiCall('/schedules', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  },
+
+  /**
+   * Update schedule (Admin only)
+   */
+  update: async (
+    id: number,
+    data: UpdateScheduleRequest
+  ): Promise<ApiResponse<FixedSchedule>> => {
+    return apiCall(`/schedules/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  },
+
+  /**
+   * Delete schedule (Admin only)
+   */
+  delete: async (id: number): Promise<ApiResponse<null>> => {
+    return apiCall(`/schedules/${id}`, {
+      method: 'DELETE',
+    })
+  },
+
+  /**
+   * Bulk create schedules (Admin only)
+   */
+  bulkCreate: async (
+    data: BulkCreateScheduleRequest
+  ): Promise<ApiResponse<{ schedules: FixedSchedule[]; count: number }>> => {
+    return apiCall('/schedules/bulk', {
+      method: 'POST',
+      body: JSON.stringify(data),
     })
   },
 }

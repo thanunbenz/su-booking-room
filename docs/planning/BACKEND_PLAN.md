@@ -27,24 +27,234 @@
 
 ---
 
-## สถานะปัจจุบัน
+## สถานะปัจจุบัน (อัปเดต: 2026-01-21)
 
-### ✅ ทำแล้ว
-- Database models ครบ 7 models (Role, User, Building, Room, Booking, FixedSchedule, Notification)
-- Database connection (PostgreSQL + GORM)
-- Auto migration
-- Basic server setup (Fiber + CORS + Logger)
-- Health check endpoint
-- Docker support
+### ✅ ทำเสร็จแล้ว
+- **Phase 1**: Setup Dependencies & Basic Utils
+  - ✅ password.go (bcrypt)
+  - ✅ jwt.go (JWT token generation/validation)
+  - ✅ response.go (Standard response format)
+  - ✅ validator.go (Custom validators)
 
-### ❌ ยังไม่มี
-- Authentication & Authorization (JWT, password hashing)
-- ทุก CRUD endpoints
-- Business logic (conflict checking, validation)
-- Notification system
-- Error handling middleware
-- Input validation
-- Tests
+- **Phase 2**: Middleware Setup
+  - ✅ auth.go (JWT authentication)
+  - ✅ role.go (Role-based authorization)
+  - ✅ error.go (Global error handler)
+  - ✅ logger.go (Request/Response logging)
+
+- **Phase 3**: Auth System
+  - ✅ Login endpoint (POST /api/v1/auth/login)
+  - ✅ Register endpoint (POST /api/v1/auth/register)
+  - ✅ Get Me endpoint (GET /api/v1/auth/me)
+  - ✅ Seeder สำหรับ default roles และ admin user
+
+- **Phase 5**: Building & Room Management (บางส่วน)
+  - ✅ Building CRUD endpoints
+  - ✅ Room CRUD endpoints
+  - ✅ Get rooms by building
+  - ❌ Room availability check (ยังไม่มี)
+
+- **Database**:
+  - ✅ Database models ครบ 7 models (Role, User, Building, Room, Booking, FixedSchedule, Notification)
+  - ✅ Database connection (PostgreSQL + GORM)
+  - ✅ Auto migration
+  - ✅ Docker support
+
+### 🔄 กำลังดำเนินการ
+- ไม่มี
+
+### ❌ ยังไม่ได้ทำ (Critical - ต้องทำก่อน Launch)
+
+- **Phase 4**: User & Role Management
+  - ❌ User CRUD endpoints (Admin only)
+  - ❌ Role CRUD endpoints (Admin only)
+  - ❌ user_handler.go
+  - ❌ role_handler.go
+
+- **Phase 6**: Fixed Schedule Management (ตารางเรียนประจำ)
+  - ✅ Fixed Schedule CRUD endpoints
+  - ✅ fixed_schedule_handler.go
+  - ✅ Bulk create schedules
+  - ✅ Conflict detection logic
+  - ✅ Time validation
+
+- **Phase 7**: 🎯 Booking Management (Core Feature - สำคัญที่สุด!)
+  - ❌ Booking CRUD endpoints
+  - ❌ Booking approval workflow (approve/reject/cancel)
+  - ❌ Conflict checking (with fixed schedules & approved bookings)
+  - ❌ Multi-day booking
+  - ❌ Room availability check endpoint
+  - ❌ Booking queries (by date, date range, calendar view)
+  - ❌ booking_handler.go
+  - ❌ Business logic (CheckConflict, CreateMultipleBookings, etc.)
+
+- **Phase 8**: Notification System
+  - ❌ Notification endpoints
+  - ❌ notification_handler.go
+  - ❌ Integration กับ booking events
+
+### 🟡 Nice to Have (ทำทีหลังได้)
+- **Phase 9**: Additional Features
+  - ❌ PDF generation (print booking)
+  - ❌ Statistics & Reports
+  - ❌ Advanced Search & Filter
+
+- **Phase 10**: Testing & Documentation
+  - ❌ Unit tests
+  - ❌ Integration tests
+  - ❌ API documentation
+
+### 📝 สังเกต
+- ไม่มี `repositories/` และ `services/` folders (handlers ทำงานกับ DB โดยตรง)
+- ควรพิจารณาแยก business logic ออกเป็น service layer สำหรับ Booking (เพราะมี logic ซับซ้อน)
+
+---
+
+## 🎯 สรุปสิ่งที่เหลือต้องทำก่อน Launch
+
+### ความสำคัญสูงสุด (Must Have):
+
+#### 1. **Phase 7: Booking Management** 🔥 (ใหญ่ที่สุด - Core Feature)
+ไฟล์ที่ต้องสร้าง:
+- `internal/handlers/booking_handler.go` - Booking CRUD + Approval workflow
+- `internal/services/booking_service.go` (แนะนำ) - Business logic ซับซ้อน
+
+Endpoints ที่ต้องทำ (~15 endpoints):
+```
+# CRUD
+GET    /api/v1/bookings                      [Admin]
+GET    /api/v1/bookings/my                   [Teacher/Admin]
+GET    /api/v1/bookings/:id                  [Owner/Admin]
+POST   /api/v1/bookings                      [Teacher/Admin]
+POST   /api/v1/bookings/multiple             [Teacher/Admin]
+PUT    /api/v1/bookings/:id                  [Owner/Admin]
+DELETE /api/v1/bookings/:id                  [Owner/Admin]
+
+# Approval Workflow
+PUT    /api/v1/bookings/:id/approve          [Admin]
+PUT    /api/v1/bookings/:id/reject           [Admin]
+PUT    /api/v1/bookings/:id/cancel           [Admin/Owner]
+
+# Queries
+GET    /api/v1/rooms/:id/bookings            [All]
+GET    /api/v1/rooms/:id/bookings/date/:date [All]
+GET    /api/v1/bookings/date-range           [All]
+GET    /api/v1/bookings/calendar/:month      [All]
+GET    /api/v1/rooms/:id/availability        [All]
+```
+
+Business Logic ที่ต้อง implement:
+- ✅ CheckConflict() - ตรวจสอบการจองซ้ำกับ approved bookings + fixed schedules
+- ✅ CreateMultipleBookings() - จองหลายวันพร้อม transaction
+- ✅ ApproveBooking() - อนุมัติ + สร้าง notification
+- ✅ RejectBooking() - ปฏิเสธ + บันทึกเหตุผล + notification
+- ✅ CancelBooking() - ยกเลิก + notification
+- ✅ ValidateEquipmentRequest() - Validate ข้อมูลอุปกรณ์
+
+**ประมาณการ**: 4-5 วัน
+
+---
+
+#### 2. **Phase 6: Fixed Schedule Management** (ตารางเรียนประจำ)
+ไฟล์ที่ต้องสร้าง:
+- `internal/handlers/fixed_schedule_handler.go`
+
+Endpoints ที่ต้องทำ (~7 endpoints):
+```
+GET    /api/v1/schedules                [All]
+GET    /api/v1/schedules/:id            [All]
+GET    /api/v1/rooms/:id/schedules      [All]
+POST   /api/v1/schedules                [Admin]
+PUT    /api/v1/schedules/:id            [Admin]
+DELETE /api/v1/schedules/:id            [Admin]
+POST   /api/v1/schedules/bulk           [Admin]
+```
+
+Business Logic:
+- ป้องกัน schedule ซ้ำกับห้องเดียวกัน วัน/เวลาเดียวกัน
+- Validate DayOfWeek (1-7) และ StartTime < EndTime
+- Bulk create สำหรับสร้างหลาย schedules พร้อมกัน
+
+**ประมาณการ**: 1-2 วัน
+
+---
+
+#### 3. **Phase 8: Notification System**
+ไฟล์ที่ต้องสร้าง:
+- `internal/handlers/notification_handler.go`
+- `internal/services/notification_service.go` (helper)
+
+Endpoints ที่ต้องทำ (~5 endpoints):
+```
+GET    /api/v1/notifications             [Auth]
+GET    /api/v1/notifications/:id         [Auth]
+PUT    /api/v1/notifications/:id/read    [Auth]
+PUT    /api/v1/notifications/read-all    [Auth]
+DELETE /api/v1/notifications/:id         [Auth]
+```
+
+Integration Points:
+- CreateBooking() → notification "รอการอนุมัติ"
+- ApproveBooking() → notification "อนุมัติแล้ว"
+- RejectBooking() → notification "ถูกปฏิเสธ"
+- CancelBooking() → notification "ถูกยกเลิก" (ถ้า Admin ยกเลิก)
+
+**ประมาณการ**: 1-2 วัน
+
+---
+
+### ความสำคัญรอง (Optional - ทำทีหลังได้):
+
+#### 4. **Phase 4: User & Role Management**
+ไฟล์ที่ต้องสร้าง:
+- `internal/handlers/user_handler.go` (~5 endpoints)
+- `internal/handlers/role_handler.go` (~5 endpoints)
+
+**ประมาณการ**: 1-2 วัน
+
+**หมายเหตุ**: ถ้าต้องการใช้ระบบเร็ว อาจทำทีหลังได้ เพราะมี auth system แล้ว
+
+---
+
+## 📊 สรุปความคืบหน้า
+
+| Phase | สถานะ | ประมาณการเวลาที่เหลือ |
+|-------|------|---------------------|
+| Phase 1: Utils | ✅ เสร็จแล้ว | - |
+| Phase 2: Middleware | ✅ เสร็จแล้ว | - |
+| Phase 3: Auth | ✅ เสร็จแล้ว | - |
+| Phase 4: User/Role Management | ❌ ยังไม่ทำ | 1-2 วัน (Optional) |
+| Phase 5: Building/Room | ✅ เสร็จแล้ว (เกือบหมด) | - |
+| Phase 6: Fixed Schedule | ✅ เสร็จแล้ว | - |
+| **Phase 7: Booking** | **❌ ยังไม่ทำ** | **4-5 วัน (Critical - Core Feature)** |
+| Phase 8: Notification | ❌ ยังไม่ทำ | 1-2 วัน (Critical) |
+| Phase 9: PDF/Stats | ❌ ยังไม่ทำ | 2-3 วัน (Nice to have) |
+| Phase 10: Tests/Docs | ❌ ยังไม่ทำ | 2-3 วัน (Nice to have) |
+
+**รวมเวลาที่เหลือ (Critical only)**: 5-7 วันทำงาน
+**รวมเวลาทั้งหมด (รวม Optional)**: 12-19 วันทำงาน
+
+---
+
+## 🚀 แนะนำลำดับการทำต่อไป
+
+เนื่องจาก **Booking Management คือ Core Feature** ที่ซับซ้อนและใหญ่ที่สุด ควรทำตามลำดับนี้:
+
+### ลำดับที่แนะนำ:
+1. **Phase 6: Fixed Schedule Management** (1-2 วัน)
+   → ต้องทำก่อน Booking เพราะ Booking ต้อง check conflict กับ Fixed Schedule
+
+2. **Phase 7: Booking Management** (4-5 วัน)
+   → Core feature หลักของระบบ ต้องทำอย่างละเอียดรอบคอบ
+
+3. **Phase 8: Notification System** (1-2 วัน)
+   → Integrate กับ Booking events
+
+4. **Phase 4: User/Role Management** (1-2 วัน) - Optional
+   → ถ้ามีเวลา ทำเพื่อความสมบูรณ์
+
+5. **Phase 9-10** (4-6 วัน) - Nice to have
+   → ทำหลัง launch ก็ได้
 
 ---
 
@@ -655,30 +865,49 @@ type CreateBookingRequest struct {
 ### 🔴 Critical Path (ต้องทำก่อน launch)
 
 **Week 1: Foundation + Login/Register**
-- [ ] Phase 1: Setup Dependencies & Utils (password, jwt, response, validator)
-- [ ] Phase 2: Middleware (auth, role, error, logger)
-- [ ] Phase 3: 🎯 Login & Register (ต้องทำให้ใช้งานได้และ test ให้ผ่าน!)
-- [ ] Phase 4: User & Role Management
+- [x] Phase 1: Setup Dependencies & Utils (password, jwt, response, validator) ✅
+- [x] Phase 2: Middleware (auth, role, error, logger) ✅
+- [x] Phase 3: 🎯 Login & Register (ต้องทำให้ใช้งานได้และ test ให้ผ่าน!) ✅
+- [ ] Phase 4: User & Role Management (Optional - ทำทีหลังได้)
 
 **Week 2: Resources**
-- [ ] Phase 5: Building & Room Management
-- [ ] Phase 6: Fixed Schedule Management
-- [ ] Phase 7.1-7.3: Booking CRUD + Queries
+- [x] Phase 5: Building & Room Management ✅
+- [x] Phase 6: Fixed Schedule Management ✅
+- [ ] Phase 7.1-7.3: Booking CRUD + Queries 🔥 **← ต่อไปนี้**
 
 **Week 3: Booking Logic**
-- [ ] Phase 7.4-7.5: Approval Workflow + Business Logic
-- [ ] Phase 8: Notification System
-- [ ] Phase 9.1: PDF Generation
+- [ ] Phase 7.4-7.5: Approval Workflow + Business Logic 🔥
+- [ ] Phase 8: Notification System 🔥
+- [ ] Phase 9.1: PDF Generation (Optional)
 
 **Week 4 (Optional):**
 - [ ] Phase 9.2-9.3: Statistics + Search/Filter
 - [ ] Phase 10: Tests + Documentation
 
 ### 🟡 Nice to Have (หลัง launch)
-- Seed data
-- Advanced statistics
-- Email notifications
-- Export to Excel
+- [x] Seed data ✅ (มีแล้ว)
+- [ ] Advanced statistics
+- [ ] Email notifications
+- [ ] Export to Excel
+- [ ] PDF generation
+
+---
+
+## 🎯 ลำดับความสำคัญของงานที่เหลือ (Priority Order)
+
+### Priority 1 - Must Have ก่อน Launch:
+1. ✅ ~~Phase 1-3: Foundation + Auth~~ (เสร็จแล้ว)
+2. ✅ ~~Phase 5: Building & Room~~ (เสร็จแล้ว)
+3. ✅ ~~Phase 6: Fixed Schedule Management~~ (เสร็จแล้ว)
+4. 🔥 **Phase 7: Booking Management** ← เริ่มตรงนี้ (ใหญ่ที่สุด - Core Feature)
+5. 🔥 **Phase 8: Notification System**
+
+### Priority 2 - Should Have:
+6. Phase 4: User & Role Management (ทำได้ทีหลัง)
+
+### Priority 3 - Nice to Have:
+7. Phase 9: PDF, Statistics, Search/Filter
+8. Phase 10: Tests & Documentation
 
 ---
 

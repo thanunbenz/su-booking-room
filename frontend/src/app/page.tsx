@@ -1,105 +1,118 @@
 'use client';
 
 import MainLayout from '@/components/layout/MainLayout';
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { Building } from '@/lib/api/types';
+import { buildingApi } from '@/lib/api/client';
+import { IoLocationOutline } from 'react-icons/io5';
 
 export default function Home() {
+  const [buildings, setBuildings] = useState<Building[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchBuildings = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const { data } = await buildingApi.getAll();
+        setBuildings(data);
+      } catch (err) {
+        console.error('Error fetching buildings:', err);
+        const errorMessage = (err as { error?: { message?: string } })?.error?.message;
+        setError(errorMessage || 'เกิดข้อผิดพลาดในการโหลดข้อมูล');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBuildings();
+  }, []);
+
+  if (loading) {
+    return (
+      <MainLayout>
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <MainLayout>
+        <div className="text-center py-12">
+          <p className="text-red-600 dark:text-red-400 mb-4">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="text-teal-600 hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300"
+          >
+            ลองใหม่อีกครั้ง
+          </button>
+        </div>
+      </MainLayout>
+    );
+  }
+
   return (
     <MainLayout>
       <div className="space-y-6">
-        {/* Search Section */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700 transition-colors">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* Building Dropdown */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                ตึกเรียน
-              </label>
-              <select className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-colors">
-                <option>ตึกเรียน</option>
-                <option>วิทยาศาสตร์ 1</option>
-                <option>15 ชั้น</option>
-              </select>
-            </div>
-
-            {/* Room Dropdown */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                ห้องเรียน
-              </label>
-              <select className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-colors">
-                <option>ห้องเรียน</option>
-              </select>
-            </div>
-
-            {/* Date Dropdown */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                วัน/เดือน/ปี
-              </label>
-              <select className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-colors">
-                <option>วัน/เดือน/ปี</option>
-              </select>
-            </div>
-
-            {/* Search Button */}
-            <div className="flex items-end">
-              <button className="w-full px-6 py-2 bg-teal-600 hover:bg-teal-700 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2">
-                ค้นหา
-              </button>
-            </div>
-          </div>
+        {/* Header */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+            ระบบจองห้องเรียน
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            เลือกตึกเรียนเพื่อดูรายละเอียดห้องเรียนและตารางเรียนประจำ
+          </p>
         </div>
 
-        {/* Results Section */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 transition-colors">
-          {/* Header with Date */}
-          <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
-              ตึกเรียน
+        {/* Building List Section */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+          <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              ตึกเรียนทั้งหมด
             </h2>
-            <span className="text-gray-600 dark:text-gray-400">
-              Monday 12/05/2025
-            </span>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">
+              {buildings.length} ตึก
+            </p>
           </div>
 
-          {/* Building Cards */}
-          <div className="p-6 space-y-4">
-            {/* Card 1 - วิทยาศาสตร์ 1 */}
-            <div className="flex justify-between items-center p-6 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 hover:shadow-md transition-all">
-              <h3 className="text-xl font-medium text-gray-900 dark:text-gray-100">
-                วิทยาศาสตร์ 1
-              </h3>
-              <button className="text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 font-medium transition-colors">
-                ดูเพิ่มเติม
-              </button>
-            </div>
+          <div className="p-6">
+            {buildings.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-gray-500 dark:text-gray-400">ไม่พบข้อมูลตึกเรียน</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {buildings.map((building) => (
+                  <Link
+                    key={building.building_id}
+                    href={`/building/${building.building_id}`}
+                    className="block p-6 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 hover:shadow-md hover:border-teal-500 dark:hover:border-teal-400 transition-all group"
+                  >
+                    <div className="flex justify-between items-start mb-3">
+                      <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">
+                        {building.name}
+                      </h3>
+                      <span className="text-teal-600 dark:text-teal-400 font-medium">
+                        ดูเพิ่มเติม →
+                      </span>
+                    </div>
 
-            {/* Card 2 - 15 ชั้น */}
-            <div className="flex justify-between items-center p-6 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 hover:shadow-md transition-all">
-              <h3 className="text-xl font-medium text-gray-900 dark:text-gray-100">
-                15 ชั้น
-              </h3>
-              <button className="text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 font-medium transition-colors">
-                ดูเพิ่มเติม
-              </button>
-            </div>
-          </div>
-
-          {/* Pagination */}
-          <div className="flex justify-center items-center gap-2 p-6 border-t border-gray-200 dark:border-gray-700">
-            <button className="w-10 h-10 flex items-center justify-center rounded-full bg-teal-600 text-white font-medium hover:bg-teal-700 transition-colors">
-              1
-            </button>
-            <button className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
-              2
-            </button>
-            <span className="text-gray-500 dark:text-gray-400">...</span>
-            <button className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
-              9
-            </button>
-            <button className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
-              &gt;
-            </button>
+                    {building.location && (
+                      <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                        <IoLocationOutline className="h-4 w-4" />
+                        <span className="text-sm">{building.location}</span>
+                      </div>
+                    )}
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

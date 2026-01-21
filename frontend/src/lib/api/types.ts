@@ -85,6 +85,43 @@ export interface UpdateRoomRequest {
   description?: string
 }
 
+// === Fixed Schedule Types ===
+
+export interface FixedSchedule {
+  schedule_id: number
+  room_id: number
+  subject: string
+  teacher_name: string
+  day_of_week: number // 1=Mon, 2=Tue, ..., 7=Sun
+  start_time: string // HH:MM or HH:MM:SS
+  end_time: string // HH:MM or HH:MM:SS
+  semester: string
+}
+
+export interface CreateScheduleRequest {
+  room_id: number
+  subject: string
+  teacher_name?: string
+  day_of_week: number
+  start_time: string
+  end_time: string
+  semester?: string
+}
+
+export interface UpdateScheduleRequest {
+  room_id?: number
+  subject?: string
+  teacher_name?: string
+  day_of_week?: number
+  start_time?: string
+  end_time?: string
+  semester?: string
+}
+
+export interface BulkCreateScheduleRequest {
+  schedules: CreateScheduleRequest[]
+}
+
 // === API Response Types ===
 
 export interface ApiResponse<T> {

@@ -9,7 +9,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// RoomHandler - MVC style handler (เหมือน Express.js)
 type RoomHandler struct {
 	DB *gorm.DB
 }

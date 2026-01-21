@@ -15,7 +15,12 @@
       "Bash(docker volume rm:*)",
       "Bash(curl:*)",
       "Bash(tree:*)",
-      "Bash(npm run dev:*)"
+      "Bash(npm run dev:*)",
+      "Bash(git mv:*)",
+      "Bash(git show:*)",
+      "Bash(make docker-restart:*)",
+      "Bash(make restart:*)",
+      "Bash(jq:*)"
     ],
     "deny": [],
     "ask": []

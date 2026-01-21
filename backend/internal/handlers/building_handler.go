@@ -29,6 +29,20 @@ func (h *BuildingHandler) GetAll(c *fiber.Ctx) error {
 	return utils.StandardResponse(c, fiber.StatusOK, buildings, "Success")
 }
 
+func (h *BuildingHandler) GetNameByID(c *fiber.Ctx) error {
+	name := c.Params("id")
+
+	var building models.Building
+	if err := h.DB.First(&building, "building_id = ?", name).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return utils.NotFoundResponse(c, "Building not found")
+		}
+		return utils.InternalServerErrorResponse(c, err.Error())
+	}
+
+	return utils.StandardResponse(c, fiber.StatusOK, building, "Success")
+}
+
 // GetByID - GET /buildings/:id
 func (h *BuildingHandler) GetByID(c *fiber.Ctx) error {
 	id, _ := strconv.Atoi(c.Params("id"))

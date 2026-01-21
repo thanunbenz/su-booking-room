@@ -10,10 +10,11 @@ import (
 )
 
 func SetupRoutes(app *fiber.App, db *gorm.DB) {
-	// Setup handlers - MVC style (เหมือน Express.js)
+	// Initialize handlers with DB connection
 	authHandler := handlers.NewAuthHandler(db)
 	buildingHandler := handlers.NewBuildingHandler(db)
 	roomHandler := handlers.NewRoomHandler(db)
+	scheduleHandler := handlers.NewFixedScheduleHandler(db)
 
 	// API v1 group
 	api := app.Group("/api/v1")
@@ -33,6 +34,7 @@ func SetupRoutes(app *fiber.App, db *gorm.DB) {
 	buildings := api.Group("/buildings")
 	buildings.Get("/", buildingHandler.GetAll)                                      // All
 	buildings.Get("/:id", buildingHandler.GetByID)                                  // All
+	buildings.Get("/:id/name", buildingHandler.GetNameByID)                                  // get name by id
 	buildings.Get("/:id/rooms", roomHandler.GetByBuildingID)                        // All - ดู rooms ในตึก
 	buildings.Post("/", middleware.AuthMiddleware, middleware.AdminOnly, buildingHandler.Create)   // Admin only
 	buildings.Put("/:id", middleware.AuthMiddleware, middleware.AdminOnly, buildingHandler.Update) // Admin only
@@ -42,9 +44,19 @@ func SetupRoutes(app *fiber.App, db *gorm.DB) {
 	rooms := api.Group("/rooms")
 	rooms.Get("/", roomHandler.GetAll)                                              // All
 	rooms.Get("/:id", roomHandler.GetByID)                                          // All
+	rooms.Get("/:id/schedules", scheduleHandler.GetByRoomID)                        // All - ดู schedules ของห้อง
 	rooms.Post("/", middleware.AuthMiddleware, middleware.AdminOnly, roomHandler.Create)   // Admin only
 	rooms.Put("/:id", middleware.AuthMiddleware, middleware.AdminOnly, roomHandler.Update) // Admin only
 	rooms.Delete("/:id", middleware.AuthMiddleware, middleware.AdminOnly, roomHandler.Delete) // Admin only
+
+	// Fixed Schedule routes (public read, admin write)
+	schedules := api.Group("/schedules")
+	schedules.Get("/", scheduleHandler.GetAll)                                                    // All
+	schedules.Get("/:id", scheduleHandler.GetByID)                                                // All
+	schedules.Post("/", middleware.AuthMiddleware, middleware.AdminOnly, scheduleHandler.Create)         // Admin only
+	schedules.Put("/:id", middleware.AuthMiddleware, middleware.AdminOnly, scheduleHandler.Update)       // Admin only
+	schedules.Delete("/:id", middleware.AuthMiddleware, middleware.AdminOnly, scheduleHandler.Delete)    // Admin only
+	schedules.Post("/bulk", middleware.AuthMiddleware, middleware.AdminOnly, scheduleHandler.BulkCreate) // Admin only
 
 	// Log registered routes
 	printRoutes(app)
