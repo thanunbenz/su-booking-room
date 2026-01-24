@@ -289,3 +289,39 @@ func (h *BookingHandler) Delete(c *fiber.Ctx) error {
 
 	return utils.StandardResponse(c, fiber.StatusOK, nil, "Booking deleted successfully")
 }
+
+// GetPublicBookings - GET /bookings/public (Public - ดูการจองสาธารณะ)
+func (h *BookingHandler) GetPublicBookings(c *fiber.Ctx) error {
+	var bookings []models.Booking
+
+	query := h.DB.Where("status IN (?, ?)", "approved", "pending").Order("booking_date ASC, start_time ASC")
+
+	// Filter by date (default: today and future)
+	if date := c.Query("date"); date != "" {
+		query = query.Where("booking_date = ?", date)
+	} else {
+		// Default: show today and future bookings
+		today := time.Now().Format("2006-01-02")
+		query = query.Where("booking_date >= ?", today)
+	}
+
+	// Filter by room_id
+	if roomID := c.Query("room_id"); roomID != "" {
+		query = query.Where("room_id = ?", roomID)
+	}
+
+	// Limit results
+	limit := 50
+	if limitStr := c.Query("limit"); limitStr != "" {
+		if parsedLimit, err := strconv.Atoi(limitStr); err == nil && parsedLimit > 0 && parsedLimit <= 100 {
+			limit = parsedLimit
+		}
+	}
+	query = query.Limit(limit)
+
+	if err := query.Find(&bookings).Error; err != nil {
+		return utils.InternalServerErrorResponse(c, err.Error())
+	}
+
+	return utils.StandardResponse(c, fiber.StatusOK, bookings, "Success")
+}

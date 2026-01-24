@@ -128,6 +128,13 @@ function MyBookingsPage() {
     });
   };
 
+  const formatTime = (timeString: string) => {
+    // แปลง HH:MM:SS หรือ HH:MM ให้เป็น HH:MM
+    if (!timeString) return '';
+    const parts = timeString.split(':');
+    return `${parts[0]}:${parts[1]}`;
+  };
+
   const filteredBookings = bookings.filter((booking) => {
     if (filterStatus === 'all') return true;
     return booking.status === filterStatus;
@@ -233,7 +240,7 @@ function MyBookingsPage() {
                       <div className="flex items-center gap-2">
                         <TbClock className="text-teal-700 dark:text-teal-500" />
                         <span>
-                          {booking.start_time} - {booking.end_time}
+                          {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
                         </span>
                       </div>
                       {booking.detail && (

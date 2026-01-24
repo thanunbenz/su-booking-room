@@ -24,7 +24,8 @@
       "Bash(lsof:*)",
       "Bash(xargs kill:*)",
       "Bash(PGPASSWORD='' psql:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(bash test_booking.sh:*)"
     ],
     "deny": [],
     "ask": []

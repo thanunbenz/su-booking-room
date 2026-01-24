@@ -209,6 +209,13 @@ function BookingPage() {
     return building ? building.name : '';
   };
 
+  const formatTime = (timeString: string) => {
+    // แปลง HH:MM:SS หรือ HH:MM ให้เป็น HH:MM
+    if (!timeString) return '';
+    const parts = timeString.split(':');
+    return `${parts[0]}:${parts[1]}`;
+  };
+
   if (loading) {
     return (
       <MainLayout>
@@ -449,7 +456,7 @@ function BookingPage() {
                             <div className="text-right">
                               <p className="font-semibold text-blue-900 dark:text-blue-100">
                                 <TbClock className="inline w-4 h-4 mr-1" />
-                                {schedule.start_time} - {schedule.end_time}
+                                {formatTime(schedule.start_time)} - {formatTime(schedule.end_time)}
                               </p>
                             </div>
                           </div>
@@ -483,7 +490,7 @@ function BookingPage() {
                             <div className="text-right">
                               <p className="font-semibold text-gray-900 dark:text-gray-100">
                                 <TbClock className="inline w-4 h-4 mr-1" />
-                                {booking.start_time} - {booking.end_time}
+                                {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
                               </p>
                             </div>
                           </div>
