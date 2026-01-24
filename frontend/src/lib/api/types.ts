@@ -43,19 +43,19 @@ export interface LoginResponse {
 export interface Building {
   building_id: number
   name: string
-  location: string
+  description: string
   created_at: string
   updated_at: string
 }
 
 export interface CreateBuildingRequest {
   name: string
-  location: string
+  description: string
 }
 
 export interface UpdateBuildingRequest {
   name?: string
-  location?: string
+  description?: string
 }
 
 // === Room Types ===
@@ -120,6 +120,41 @@ export interface UpdateScheduleRequest {
 
 export interface BulkCreateScheduleRequest {
   schedules: CreateScheduleRequest[]
+}
+
+// === Booking Types ===
+
+export type BookingStatus = 'pending' | 'approved' | 'rejected' | 'cancelled' | 'completed'
+
+export interface Booking {
+  booking_id: number
+  user_id: number
+  room_id: number
+  title: string
+  detail: string
+  equipment_request: string
+  booking_date: string // YYYY-MM-DD
+  start_time: string // HH:MM
+  end_time: string // HH:MM
+  status: BookingStatus
+  status_note: string
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateBookingRequest {
+  room_id: number
+  title: string
+  detail?: string
+  equipment_request?: string
+  booking_date: string // YYYY-MM-DD
+  start_time: string // HH:MM
+  end_time: string // HH:MM
+}
+
+export interface UpdateBookingStatusRequest {
+  status: BookingStatus
+  status_note?: string
 }
 
 // === API Response Types ===

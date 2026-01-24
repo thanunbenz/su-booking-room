@@ -119,17 +119,61 @@ func (h *BuildingHandler) Update(c *fiber.Ctx) error {
 }
 
 // Delete - DELETE /buildings/:id
+// ลบ building พร้อมทั้ง rooms, bookings และ fixed_schedules ที่เกี่ยวข้องทั้งหมด (cascade delete)
 func (h *BuildingHandler) Delete(c *fiber.Ctx) error {
 	id, _ := strconv.Atoi(c.Params("id"))
 
-	result := h.DB.Delete(&models.Building{}, "building_id = ?", id)
-	if result.Error != nil {
-		return utils.InternalServerErrorResponse(c, result.Error.Error())
+	// ตรวจสอบว่า building มีอยู่จริงหรือไม่
+	var building models.Building
+	if err := h.DB.First(&building, "building_id = ?", id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return utils.NotFoundResponse(c, "Building not found")
+		}
+		return utils.InternalServerErrorResponse(c, err.Error())
 	}
 
-	if result.RowsAffected == 0 {
-		return utils.NotFoundResponse(c, "Building not found")
+	// ใช้ transaction เพื่อความปลอดภัย - ถ้า error ระหว่างทางจะ rollback ทั้งหมด
+	err := h.DB.Transaction(func(tx *gorm.DB) error {
+		// Step 1: หา rooms ทั้งหมดในตึกนี้
+		var rooms []models.Room
+		if err := tx.Where("building_id = ?", id).Find(&rooms).Error; err != nil {
+			return err
+		}
+
+		// Step 2: ลบข้อมูลที่เกี่ยวข้องกับ rooms (bookings และ fixed_schedules)
+		if len(rooms) > 0 {
+			roomIDs := make([]int, len(rooms))
+			for i, room := range rooms {
+				roomIDs[i] = room.RoomID
+			}
+
+			// ลบ bookings ที่มี room_id ในรายการนี้
+			if err := tx.Where("room_id IN ?", roomIDs).Delete(&models.Booking{}).Error; err != nil {
+				return err
+			}
+
+			// ลบ fixed_schedules ที่มี room_id ในรายการนี้
+			if err := tx.Where("room_id IN ?", roomIDs).Delete(&models.FixedSchedule{}).Error; err != nil {
+				return err
+			}
+		}
+
+		// Step 3: ลบ rooms ทั้งหมดในตึกนี้
+		if err := tx.Where("building_id = ?", id).Delete(&models.Room{}).Error; err != nil {
+			return err
+		}
+
+		// Step 4: ลบ building
+		if err := tx.Delete(&building).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return utils.InternalServerErrorResponse(c, err.Error())
 	}
 
-	return utils.StandardResponse(c, fiber.StatusOK, nil, "Building deleted successfully")
+	return utils.StandardResponse(c, fiber.StatusOK, nil, "Building and all related rooms, bookings, and schedules deleted successfully")
 }

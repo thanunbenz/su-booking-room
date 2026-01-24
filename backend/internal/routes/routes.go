@@ -15,6 +15,8 @@ func SetupRoutes(app *fiber.App, db *gorm.DB) {
 	buildingHandler := handlers.NewBuildingHandler(db)
 	roomHandler := handlers.NewRoomHandler(db)
 	scheduleHandler := handlers.NewFixedScheduleHandler(db)
+	bookingHandler := handlers.NewBookingHandler(db)
+	seedHandler := handlers.NewSeedHandler(db)
 
 	// API v1 group
 	api := app.Group("/api/v1")
@@ -45,6 +47,7 @@ func SetupRoutes(app *fiber.App, db *gorm.DB) {
 	rooms.Get("/", roomHandler.GetAll)                                              // All
 	rooms.Get("/:id", roomHandler.GetByID)                                          // All
 	rooms.Get("/:id/schedules", scheduleHandler.GetByRoomID)                        // All - ดู schedules ของห้อง
+	rooms.Get("/:id/availability", bookingHandler.GetByRoomAndDate)                 // All - ดูการจองของห้อง (สำหรับตรวจสอบความว่าง)
 	rooms.Post("/", middleware.AuthMiddleware, middleware.AdminOnly, roomHandler.Create)   // Admin only
 	rooms.Put("/:id", middleware.AuthMiddleware, middleware.AdminOnly, roomHandler.Update) // Admin only
 	rooms.Delete("/:id", middleware.AuthMiddleware, middleware.AdminOnly, roomHandler.Delete) // Admin only
@@ -57,6 +60,21 @@ func SetupRoutes(app *fiber.App, db *gorm.DB) {
 	schedules.Put("/:id", middleware.AuthMiddleware, middleware.AdminOnly, scheduleHandler.Update)       // Admin only
 	schedules.Delete("/:id", middleware.AuthMiddleware, middleware.AdminOnly, scheduleHandler.Delete)    // Admin only
 	schedules.Post("/bulk", middleware.AuthMiddleware, middleware.AdminOnly, scheduleHandler.BulkCreate) // Admin only
+
+	// Booking routes (require authentication)
+	bookings := api.Group("/bookings", middleware.AuthMiddleware)
+	bookings.Get("/my", bookingHandler.GetMyBookings)                                   // User - ดูการจองของตัวเอง
+	bookings.Get("/:id", bookingHandler.GetByID)                                        // User/Admin - ดูการจองตาม ID
+	bookings.Post("/", bookingHandler.Create)                                           // User - สร้างการจอง
+	bookings.Delete("/:id/cancel", bookingHandler.Cancel)                               // User - ยกเลิกการจอง
+	bookings.Get("/", middleware.AdminOnly, bookingHandler.GetAll)                      // Admin only - ดูการจองทั้งหมด
+	bookings.Patch("/:id/status", middleware.AdminOnly, bookingHandler.UpdateStatus)    // Admin only - อนุมัติ/ปฏิเสธ
+	bookings.Delete("/:id", middleware.AdminOnly, bookingHandler.Delete)                // Admin only - ลบการจอง
+
+	// Seed routes (Admin only - for testing)
+	seed := api.Group("/seed", middleware.AuthMiddleware, middleware.AdminOnly)
+	seed.Post("/all", seedHandler.SeedAll)     // สร้าง mock data ทั้งหมด
+	seed.Delete("/clear", seedHandler.ClearAll) // ลบข้อมูลทั้งหมด (ยกเว้น users)
 
 	// Log registered routes
 	printRoutes(app)

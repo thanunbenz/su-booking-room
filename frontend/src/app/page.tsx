@@ -103,10 +103,10 @@ export default function Home() {
                       </span>
                     </div>
 
-                    {building.location && (
+                    {building.description && (
                       <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                         <IoLocationOutline className="h-4 w-4" />
-                        <span className="text-sm">{building.location}</span>
+                        <span className="text-sm">{building.description}</span>
                       </div>
                     )}
                   </Link>

@@ -19,6 +19,9 @@ import type {
   CreateScheduleRequest,
   UpdateScheduleRequest,
   BulkCreateScheduleRequest,
+  Booking,
+  CreateBookingRequest,
+  UpdateBookingStatusRequest,
 } from './types'
 
 // Base URL
@@ -176,6 +179,17 @@ export const roomApi = {
   },
 
   /**
+   * Get room availability (bookings for a specific room and date)
+   */
+  getAvailability: async (roomId: number, date?: string): Promise<ApiResponse<Booking[]>> => {
+    const queryParams = new URLSearchParams()
+    if (date) queryParams.append('date', date)
+
+    const query = queryParams.toString()
+    return apiCall(`/rooms/${roomId}/availability${query ? `?${query}` : ''}`)
+  },
+
+  /**
    * Create new room (Admin only)
    */
   create: async (data: CreateRoomRequest): Promise<ApiResponse<Room>> => {
@@ -290,6 +304,84 @@ export const scheduleApi = {
     return apiCall('/schedules/bulk', {
       method: 'POST',
       body: JSON.stringify(data),
+    })
+  },
+}
+
+// ===================================
+// Booking API
+// ===================================
+
+export const bookingApi = {
+  /**
+   * Get all bookings (Admin only)
+   */
+  getAll: async (params?: {
+    status?: string
+    room_id?: number
+    date?: string
+  }): Promise<ApiResponse<Booking[]>> => {
+    const queryParams = new URLSearchParams()
+    if (params?.status) queryParams.append('status', params.status)
+    if (params?.room_id) queryParams.append('room_id', params.room_id.toString())
+    if (params?.date) queryParams.append('date', params.date)
+
+    const query = queryParams.toString()
+    return apiCall(`/bookings${query ? `?${query}` : ''}`)
+  },
+
+  /**
+   * Get my bookings
+   */
+  getMyBookings: async (): Promise<ApiResponse<Booking[]>> => {
+    return apiCall('/bookings/my')
+  },
+
+  /**
+   * Get booking by ID
+   */
+  getById: async (id: number): Promise<ApiResponse<Booking>> => {
+    return apiCall(`/bookings/${id}`)
+  },
+
+  /**
+   * Create new booking
+   */
+  create: async (data: CreateBookingRequest): Promise<ApiResponse<Booking>> => {
+    return apiCall('/bookings', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  },
+
+  /**
+   * Update booking status (Admin only)
+   */
+  updateStatus: async (
+    id: number,
+    data: UpdateBookingStatusRequest
+  ): Promise<ApiResponse<Booking>> => {
+    return apiCall(`/bookings/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    })
+  },
+
+  /**
+   * Cancel booking (User - own booking only)
+   */
+  cancel: async (id: number): Promise<ApiResponse<Booking>> => {
+    return apiCall(`/bookings/${id}/cancel`, {
+      method: 'DELETE',
+    })
+  },
+
+  /**
+   * Delete booking (Admin only)
+   */
+  delete: async (id: number): Promise<ApiResponse<null>> => {
+    return apiCall(`/bookings/${id}`, {
+      method: 'DELETE',
     })
   },
 }

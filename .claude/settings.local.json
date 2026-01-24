@@ -21,7 +21,9 @@
       "Bash(make docker-restart:*)",
       "Bash(make restart:*)",
       "Bash(jq:*)",
-      "Bash(lsof:*)"
+      "Bash(lsof:*)",
+      "Bash(xargs kill:*)",
+      "Bash(PGPASSWORD='' psql:*)"
     ],
     "deny": [],
     "ask": []
