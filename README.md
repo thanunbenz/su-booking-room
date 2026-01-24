@@ -9,6 +9,11 @@
 - 📘 **[Makefile Guide](docs/guides/MAKEFILE_GUIDE.md)** - คู่มือการใช้งาน Make commands ทั้งหมด
 - 📋 **[Makefile Cheatsheet](docs/guides/MAKEFILE_CHEATSHEET.md)** - คำสั่ง Make ฉบับย่อ
 
+### 🧪 API Testing
+- 📝 **[Booking API Test Guide](docs/api/BOOKING_API_TEST.md)** - คู่มือทดสอบ Booking API ด้วย Postman
+- 📦 **[Postman Collection](docs/api/SU_Booking_Room_Postman_Collection.json)** - Import เข้า Postman ได้เลย
+- 🔧 **[Test Script](docs/api/test_booking_api.sh)** - Bash script ทดสอบอัตโนมัติ
+
 ### 🏗️ Architecture & Planning
 - 🏛️ **[Architecture](docs/architecture/ARCHITECTURE.md)** - สถาปัตยกรรมระบบ
 - 📝 **[Backend Plan](docs/planning/BACKEND_PLAN.md)** - แผนการพัฒนา Backend
@@ -247,12 +252,45 @@ npm start
 
 Backend API รันที่ `http://localhost:8000`
 
-### Endpoints (Coming soon)
-- `GET /health` - Health check
+### ทดสอบ API ด้วย Postman
+```bash
+# Import ไฟล์เหล่านี้เข้า Postman
+1. docs/api/SU_Booking_Room_Postman_Collection.json  # Collection
+2. docs/api/SU_Booking_Room_Postman_Environment.json  # Environment
+
+# หรือใช้ Bash script ทดสอบอัตโนมัติ
+chmod +x docs/api/test_booking_api.sh
+./docs/api/test_booking_api.sh
+```
+
+### Main Endpoints
+
+**Authentication**
+- `POST /api/v1/auth/login` - Login
+- `POST /api/v1/auth/register` - Register
+- `GET /api/v1/auth/me` - Get current user
+
+**Buildings**
 - `GET /api/v1/buildings` - Get all buildings
+- `GET /api/v1/buildings/:id` - Get building by ID
+- `POST /api/v1/buildings` - Create building (Admin only)
+- `PUT /api/v1/buildings/:id` - Update building (Admin only)
+- `DELETE /api/v1/buildings/:id` - Delete building (Admin only)
+
+**Rooms**
 - `GET /api/v1/rooms` - Get all rooms
+- `GET /api/v1/rooms/:id` - Get room by ID
+- `GET /api/v1/rooms/:id/availability` - Get room availability
+- `POST /api/v1/rooms` - Create room (Admin only)
+
+**Bookings**
+- `GET /api/v1/bookings/my` - Get my bookings
+- `GET /api/v1/bookings` - Get all bookings (Admin only)
 - `POST /api/v1/bookings` - Create booking
-- ...
+- `PATCH /api/v1/bookings/:id/status` - Update booking status (Admin only)
+- `DELETE /api/v1/bookings/:id/cancel` - Cancel booking
+
+📖 **รายละเอียดเพิ่มเติม:** [Booking API Test Guide](docs/api/BOOKING_API_TEST.md)
 
 ## 🤝 Contributing
 

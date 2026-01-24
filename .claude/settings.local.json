@@ -23,7 +23,8 @@
       "Bash(jq:*)",
       "Bash(lsof:*)",
       "Bash(xargs kill:*)",
-      "Bash(PGPASSWORD='' psql:*)"
+      "Bash(PGPASSWORD='' psql:*)",
+      "Bash(chmod:*)"
     ],
     "deny": [],
     "ask": []

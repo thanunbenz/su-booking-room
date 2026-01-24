@@ -272,8 +272,49 @@ cd ..
 make db-shell
 ```
 
+## 🧪 API Testing
+
+### ด้วย Postman
+```bash
+# Import ไฟล์เหล่านี้เข้า Postman
+1. ../docs/api/SU_Booking_Room_Postman_Collection.json  # Collection
+2. ../docs/api/SU_Booking_Room_Postman_Environment.json  # Environment
+```
+
+### ด้วย Bash Script (Automated)
+```bash
+# ให้สิทธิ์ execute
+chmod +x ../docs/api/test_booking_api.sh
+
+# รัน test
+../docs/api/test_booking_api.sh
+```
+
+### ด้วย curl (Manual)
+```bash
+# Login
+curl -X POST http://localhost:8000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "admin@silpakorn.edu", "password": "admin123"}'
+
+# Create Booking
+curl -X POST http://localhost:8000/api/v1/bookings \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "room_id": 1,
+    "title": "ประชุม",
+    "booking_date": "2026-01-25",
+    "start_time": "14:00",
+    "end_time": "16:00"
+  }'
+```
+
+📖 **รายละเอียด:** [Booking API Test Guide](../docs/api/BOOKING_API_TEST.md)
+
 ## 📖 เอกสารเพิ่มเติม
 
+- **[BOOKING_API_TEST.md](../docs/api/BOOKING_API_TEST.md)** - คู่มือทดสอบ Booking API
 - **[ARCHITECTURE_SIMPLE.md](ARCHITECTURE_SIMPLE.md)** - อธิบายโครงสร้างแบบละเอียด
 - **[REFACTOR_COMPARISON.md](REFACTOR_COMPARISON.md)** - เปรียบเทียบ Before/After
 - **[QUICK_START_SIMPLE.md](QUICK_START_SIMPLE.md)** - คู่มือเริ่มต้น 5 นาที

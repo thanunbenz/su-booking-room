@@ -1,0 +1,506 @@
+{
+  "info": {
+    "_postman_id": "su-booking-room-api",
+    "name": "SU Booking Room API",
+    "description": "Complete API collection for SU Booking Room system",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Authentication",
+      "item": [
+        {
+          "name": "Login (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set(\"access_token\", response.data.access_token);",
+                  "    pm.environment.set(\"refresh_token\", response.data.refresh_token);",
+                  "    console.log(\"✅ Admin login successful\");",
+                  "    console.log(\"Token saved:\", response.data.access_token);",
+                  "} else {",
+                  "    console.log(\"❌ Login failed\");",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/auth/login",
+              "host": ["{{base_url}}{{api_version}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Login (User)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set(\"user_access_token\", response.data.access_token);",
+                  "    console.log(\"✅ User login successful\");",
+                  "} else {",
+                  "    console.log(\"❌ Login failed\");",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{user_email}}\",\n  \"password\": \"{{user_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/auth/login",
+              "host": ["{{base_url}}{{api_version}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/auth/me",
+              "host": ["{{base_url}}{{api_version}}"],
+              "path": ["auth", "me"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Bookings - User",
+      "item": [
+        {
+          "name": "Get My Bookings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/bookings/my",
+              "host": ["{{base_url}}{{api_version}}"],
+              "path": ["bookings", "my"]
+            }
+          }
+        },
+        {
+          "name": "Create Booking - Valid",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set(\"last_booking_id\", response.data.booking_id);",
+                  "    console.log(\"✅ Booking created:\", response.data.booking_id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"room_id\": 1,\n  \"title\": \"ประชุมกลุ่ม\",\n  \"detail\": \"ประชุมโครงงาน Software Engineering\",\n  \"equipment_request\": \"โปรเจคเตอร์ 1 เครื่อง, คอมพิวเตอร์ 5 เครื่อง\",\n  \"booking_date\": \"2026-01-28\",\n  \"start_time\": \"14:00\",\n  \"end_time\": \"16:00\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/bookings",
+              "host": ["{{base_url}}{{api_version}}"],
+              "path": ["bookings"]
+            }
+          }
+        },
+        {
+          "name": "Create Booking - Time Conflict (Should Fail)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"room_id\": 1,\n  \"title\": \"การจองซ้อนทับ\",\n  \"detail\": \"ควรจะ fail เพราะเวลาซ้อน\",\n  \"booking_date\": \"2026-01-28\",\n  \"start_time\": \"15:00\",\n  \"end_time\": \"17:00\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/bookings",
+              "host": ["{{base_url}}{{api_version}}"],
+              "path": ["bookings"]
+            }
+          }
+        },
+        {
+          "name": "Create Booking - Invalid Time (Should Fail)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"room_id\": 1,\n  \"title\": \"เวลาผิด\",\n  \"booking_date\": \"2026-01-28\",\n  \"start_time\": \"17:00\",\n  \"end_time\": \"15:00\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/bookings",
+              "host": ["{{base_url}}{{api_version}}"],
+              "path": ["bookings"]
+            }
+          }
+        },
+        {
+          "name": "Create Booking - Past Date (Should Fail)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"room_id\": 1,\n  \"title\": \"จองย้อนหลัง\",\n  \"booking_date\": \"2024-01-01\",\n  \"start_time\": \"09:00\",\n  \"end_time\": \"11:00\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/bookings",
+              "host": ["{{base_url}}{{api_version}}"],
+              "path": ["bookings"]
+            }
+          }
+        },
+        {
+          "name": "Get Booking by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/bookings/{{last_booking_id}}",
+              "host": ["{{base_url}}{{api_version}}"],
+              "path": ["bookings", "{{last_booking_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Cancel Own Booking",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/bookings/{{last_booking_id}}/cancel",
+              "host": ["{{base_url}}{{api_version}}"],
+              "path": ["bookings", "{{last_booking_id}}", "cancel"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Bookings - Admin",
+      "item": [
+        {
+          "name": "Get All Bookings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/bookings",
+              "host": ["{{base_url}}{{api_version}}"],
+              "path": ["bookings"]
+            }
+          }
+        },
+        {
+          "name": "Get All Bookings - Filter by Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/bookings?status=pending",
+              "host": ["{{base_url}}{{api_version}}"],
+              "path": ["bookings"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "pending"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get All Bookings - Filter by Room and Date",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/bookings?room_id=1&date=2026-01-28",
+              "host": ["{{base_url}}{{api_version}}"],
+              "path": ["bookings"],
+              "query": [
+                {
+                  "key": "room_id",
+                  "value": "1"
+                },
+                {
+                  "key": "date",
+                  "value": "2026-01-28"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Approve Booking",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"approved\",\n  \"status_note\": \"อนุมัติแล้ว พร้อมใช้งาน\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/bookings/{{last_booking_id}}/status",
+              "host": ["{{base_url}}{{api_version}}"],
+              "path": ["bookings", "{{last_booking_id}}", "status"]
+            }
+          }
+        },
+        {
+          "name": "Reject Booking",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"rejected\",\n  \"status_note\": \"ห้องไม่เหมาะสมกับกิจกรรม\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/bookings/{{last_booking_id}}/status",
+              "host": ["{{base_url}}{{api_version}}"],
+              "path": ["bookings", "{{last_booking_id}}", "status"]
+            }
+          }
+        },
+        {
+          "name": "Delete Booking",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/bookings/{{last_booking_id}}",
+              "host": ["{{base_url}}{{api_version}}"],
+              "path": ["bookings", "{{last_booking_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Room Availability",
+      "item": [
+        {
+          "name": "Get Room Availability (Public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/rooms/1/availability?date=2026-01-28",
+              "host": ["{{base_url}}{{api_version}}"],
+              "path": ["rooms", "1", "availability"],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2026-01-28"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Room Availability - All Dates",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/rooms/1/availability",
+              "host": ["{{base_url}}{{api_version}}"],
+              "path": ["rooms", "1", "availability"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Helper Endpoints",
+      "item": [
+        {
+          "name": "Get All Buildings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/buildings",
+              "host": ["{{base_url}}{{api_version}}"],
+              "path": ["buildings"]
+            }
+          }
+        },
+        {
+          "name": "Get All Rooms",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/rooms",
+              "host": ["{{base_url}}{{api_version}}"],
+              "path": ["rooms"]
+            }
+          }
+        },
+        {
+          "name": "Get Room Schedules",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/rooms/1/schedules",
+              "host": ["{{base_url}}{{api_version}}"],
+              "path": ["rooms", "1", "schedules"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000"
+    },
+    {
+      "key": "api_version",
+      "value": "/api/v1"
+    }
+  ]
+}
