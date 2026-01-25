@@ -3,8 +3,8 @@
 import MainLayout from '@/components/layout/MainLayout';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { Building, Booking, Room, FixedSchedule } from '@/lib/api/types';
-import { buildingApi, bookingApi, roomApi, scheduleApi } from '@/lib/api/client';
+import { Building, Room, FixedSchedule,Booking } from '@/lib/api/types';
+import { buildingApi, roomApi, scheduleApi,bookingApi } from '@/lib/api/client';
 import { IoLocationOutline } from 'react-icons/io5';
 import { TbCalendar, TbClock } from 'react-icons/tb';
 import { useAuth } from '@/contexts/AuthContext';
@@ -13,7 +13,7 @@ export default function Home() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [schedules, setSchedules] = useState<FixedSchedule[]>([]);
-  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [booking, setBooking] = useState<Booking[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -24,19 +24,17 @@ export default function Home() {
       try {
         setLoading(true);
         setError(null);
-
-        // Fetch all data (public)
-        const [buildingsRes, roomsRes, schedulesRes, bookingsRes] = await Promise.all([
+        const [buildingsRes, roomsRes, schedulesRes, bookingApiRes] = await Promise.all([
           buildingApi.getAll(),
           roomApi.getAll(),
           scheduleApi.getAll(),
-          bookingApi.getPublic({}).catch(() => ({ data: [] })), // Public endpoint - get all bookings
+          bookingApi.getAll({ booking_date: selectedDate.toISOString().split('T')[0] }),
         ]);
 
         setBuildings(buildingsRes.data);
         setRooms(roomsRes.data);
         setSchedules(schedulesRes.data);
-        setBookings(bookingsRes.data);
+        setBooking(bookingApiRes.data);
       } catch (err) {
         console.error('Error fetching data:', err);
         const errorMessage = (err as { error?: { message?: string } })?.error?.message;
@@ -88,17 +86,28 @@ export default function Home() {
 
   const formatTime = (timeString: string) => {
     if (!timeString) return '';
+
+    if (timeString.includes('T')) {
+      const date = new Date(timeString);
+      const hours = date.getHours().toString().padStart(2, '0');
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      return `${hours}:${minutes}`;
+    }
+
+    // ถ้าเป็น time string ธรรมดา (HH:MM:SS หรือ HH:MM)
     const parts = timeString.split(':');
     return `${parts[0]}:${parts[1]}`;
   };
 
-  // Get day of week (1=Mon, 2=Tue, ..., 7=Sun) for selected date
   const getSelectedDayOfWeek = () => {
     const day = selectedDate.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
     return day === 0 ? 7 : day; // Convert to 1=Mon, 7=Sun
   };
 
-  // Group schedules and bookings by building -> room
+  type ScheduleOrBooking =
+    | { type: 'schedule'; data: FixedSchedule }
+    | { type: 'booking'; data: Booking };
+
   const getSchedulesByBuilding = () => {
     const selectedDayOfWeek = getSelectedDayOfWeek();
     const selectedDateStr = selectedDate.toISOString().split('T')[0];
@@ -106,14 +115,17 @@ export default function Home() {
     // Filter schedules for selected day
     const daySchedules = schedules.filter((s) => s.day_of_week === selectedDayOfWeek);
 
-    // Filter bookings for selected date
-    const dateBookings = bookings.filter((b) => {
-      const bookingDate = new Date(b.booking_date).toISOString().split('T')[0];
-      return bookingDate === selectedDateStr && b.status === 'approved';
+    // Filter bookings for selected date and approved/pending status
+    const dayBookings = booking.filter((b) => {
+      // แปลง booking_date ให้เป็น YYYY-MM-DD เพื่อเปรียบเทียบ
+      const bookingDateStr = b.booking_date.split('T')[0];
+      return (
+        bookingDateStr === selectedDateStr &&
+        (b.status === 'approved')
+      );
     });
 
     // Group by building
-    type ScheduleOrBooking = { type: 'schedule'; data: FixedSchedule } | { type: 'booking'; data: Booking };
     const grouped: Record<
       number,
       { building: Building; rooms: Record<number, { room: Room; items: ScheduleOrBooking[] }> }
@@ -151,8 +163,8 @@ export default function Home() {
     });
 
     // Add bookings
-    dateBookings.forEach((booking) => {
-      const room = rooms.find((r) => r.room_id === booking.room_id);
+    dayBookings.forEach((bookingItem) => {
+      const room = rooms.find((r) => r.room_id === bookingItem.room_id);
       if (!room) return;
 
       const building = buildings.find((b) => b.building_id === room.building_id);
@@ -177,7 +189,7 @@ export default function Home() {
       // Add booking to room
       grouped[building.building_id].rooms[room.room_id].items.push({
         type: 'booking',
-        data: booking,
+        data: bookingItem,
       });
     });
 
@@ -185,15 +197,31 @@ export default function Home() {
     Object.values(grouped).forEach((buildingData) => {
       Object.values(buildingData.rooms).forEach((roomData) => {
         roomData.items.sort((a, b) => {
-          const timeA = a.type === 'schedule' ? a.data.start_time : a.data.start_time;
-          const timeB = b.type === 'schedule' ? b.data.start_time : b.data.start_time;
-          return timeA.localeCompare(timeB);
+          const aTime = a.data.start_time;
+          const bTime = b.data.start_time;
+
+          // แปลงทั้ง timestamp และ time string ให้เป็น minutes from midnight
+          const getMinutesFromMidnight = (timeStr: string): number => {
+            if (timeStr.includes('T')) {
+              // Timestamp - แปลงเป็น Date object แล้วดึง hours และ minutes
+              const date = new Date(timeStr);
+              return date.getHours() * 60 + date.getMinutes();
+            } else {
+              // Time string - แปลงเป็น minutes จาก midnight
+              const [hours, minutes] = timeStr.split(':').map(Number);
+              return hours * 60 + minutes;
+            }
+          };
+
+          return getMinutesFromMidnight(aTime) - getMinutesFromMidnight(bTime);
         });
       });
     });
 
     return grouped;
   };
+
+  console.log(booking);
 
   return (
     <MainLayout>
@@ -208,14 +236,14 @@ export default function Home() {
           </p>
         </div>
 
-        {/* Schedule and Bookings Table Section */}
+        {/* Schedule Table Section */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                     <TbCalendar className="text-teal-700 dark:text-teal-500" />
-                    ตารางเรียนและการจองห้อง
+                    ตารางเรียนประจำ
                   </h2>
                   <p className="text-gray-600 dark:text-gray-400 mt-1">
                     {formatDate(selectedDate.toISOString())}
@@ -257,7 +285,7 @@ export default function Home() {
             <div className="overflow-x-auto">
               {Object.keys(getSchedulesByBuilding()).length === 0 ? (
                 <div className="text-center py-12">
-                  <p className="text-gray-500 dark:text-gray-400">ไม่พบตารางเรียนและการจอง</p>
+                  <p className="text-gray-500 dark:text-gray-400">ไม่พบตารางเรียน</p>
                 </div>
               ) : (
                 <table className="w-full">
@@ -273,15 +301,17 @@ export default function Home() {
                         เวลา
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        รายการ
+                        วิชา
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        ประเภท
+                        อาจารย์
                       </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                    {Object.entries(getSchedulesByBuilding()).map(([, buildingData]) => {
+                    {Object.entries(getSchedulesByBuilding())
+                      .sort((a, b) => a[1].building.name.localeCompare(b[1].building.name, 'th'))
+                      .map(([, buildingData]) => {
                       let buildingRowSpan = 0;
                       Object.values(buildingData.rooms).forEach((roomData) => {
                         buildingRowSpan += roomData.items.length;
@@ -289,21 +319,24 @@ export default function Home() {
 
                       let isFirstBuildingRow = true;
 
-                      return Object.entries(buildingData.rooms).map(([, roomData]) => {
+                      return Object.entries(buildingData.rooms)
+                        .sort((a, b) => a[1].room.name.localeCompare(b[1].room.name, 'th'))
+                        .map(([, roomData]) => {
                         return roomData.items.map((item, itemIndex) => {
                           const isSchedule = item.type === 'schedule';
                           const data = item.data;
 
+                          // Determine styling based on type
+                          const rowBgClass = isSchedule
+                            ? 'bg-blue-50/30 dark:bg-blue-900/10'
+                            : item.data.status === 'approved'
+                            ? 'bg-green-50/30 dark:bg-green-900/10'
+                            : 'bg-yellow-50/30 dark:bg-yellow-900/10';
+
                           const row = (
                             <tr
-                              key={
-                                isSchedule
-                                  ? `schedule-${(data as FixedSchedule).schedule_id}`
-                                  : `booking-${(data as Booking).booking_id}`
-                              }
-                              className={`hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${
-                                isSchedule ? 'bg-blue-50/30 dark:bg-blue-900/10' : ''
-                              }`}
+                              key={isSchedule ? `schedule-${data.schedule_id}` : `booking-${data.booking_id}`}
+                              className={`hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${rowBgClass}`}
                             >
                               {/* Building Column */}
                               {isFirstBuildingRow && itemIndex === 0 && (
@@ -337,37 +370,40 @@ export default function Home() {
                                 </div>
                               </td>
 
-                              {/* Title Column */}
+                              {/* Title/Subject Column */}
                               <td className="px-6 py-4">
-                                <div className="text-sm">
-                                  <div className="font-bold text-gray-900 dark:text-white">
-                                    {isSchedule
-                                      ? (data as FixedSchedule).subject
-                                      : (data as Booking).title}
+                                <div className="text-sm font-bold text-gray-900 dark:text-white">
+                                  {isSchedule ? data.subject : data.title}
+                                </div>
+                                {!isSchedule && data.detail && (
+                                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    {data.detail}
                                   </div>
-                                  {isSchedule ? (
-                                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                      อาจารย์: {(data as FixedSchedule).teacher_name}
-                                    </div>
-                                  ) : (
-                                    (data as Booking).detail && (
-                                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                        {(data as Booking).detail}
-                                      </div>
-                                    )
-                                  )}
+                                )}
+                              </td>
+
+                              {/* Teacher/User Column */}
+                              <td className="px-6 py-4">
+                                <div className="text-sm text-gray-700 dark:text-gray-300">
+                                  {isSchedule ? data.teacher_name : `ผู้ใช้ ID: ${data.user_id}`}
                                 </div>
                               </td>
 
                               {/* Type Column */}
-                              <td className="px-6 py-4 whitespace-nowrap">
+                              <td className="px-6 py-4">
                                 {isSchedule ? (
-                                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400">
+                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
                                     ตารางเรียน
                                   </span>
                                 ) : (
-                                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
-                                    จองห้อง
+                                  <span
+                                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                      data.status === 'approved'
+                                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                        : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                                    }`}
+                                  >
+                                    {data.status === 'approved' ? 'จองแล้ว (อนุมัติ)' : 'รอการอนุมัติ'}
                                   </span>
                                 )}
                               </td>

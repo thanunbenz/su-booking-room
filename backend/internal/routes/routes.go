@@ -61,19 +61,15 @@ func SetupRoutes(app *fiber.App, db *gorm.DB) {
 	schedules.Delete("/:id", middleware.AuthMiddleware, middleware.AdminOnly, scheduleHandler.Delete)    // Admin only
 	schedules.Post("/bulk", middleware.AuthMiddleware, middleware.AdminOnly, scheduleHandler.BulkCreate) // Admin only
 
-	// Booking routes (public endpoints first)
-	bookings := api.Group("/bookings")
-	bookings.Get("/public", bookingHandler.GetPublicBookings)                           // Public - ดูการจองสาธารณะ (approved + pending)
-
 	// Booking routes (require authentication)
-	bookingsAuth := bookings.Group("", middleware.AuthMiddleware)
-	bookingsAuth.Get("/my", bookingHandler.GetMyBookings)                               // User - ดูการจองของตัวเอง
-	bookingsAuth.Get("/:id", bookingHandler.GetByID)                                    // User/Admin - ดูการจองตาม ID
-	bookingsAuth.Post("/", bookingHandler.Create)                                       // User - สร้างการจอง
-	bookingsAuth.Delete("/:id/cancel", bookingHandler.Cancel)                           // User - ยกเลิกการจอง
-	bookingsAuth.Get("/", middleware.AdminOnly, bookingHandler.GetAll)                  // Admin only - ดูการจองทั้งหมด
-	bookingsAuth.Patch("/:id/status", middleware.AdminOnly, bookingHandler.UpdateStatus) // Admin only - อนุมัติ/ปฏิเสธ
-	bookingsAuth.Delete("/:id", middleware.AdminOnly, bookingHandler.Delete)            // Admin only - ลบการจอง
+	bookings := api.Group("/bookings", middleware.AuthMiddleware)
+	bookings.Get("/my", bookingHandler.GetMyBookings)                               // User - ดูการจองของตัวเอง
+	bookings.Get("/:id", bookingHandler.GetByID)                                    // User/Admin - ดูการจองตาม ID
+	bookings.Post("/", bookingHandler.Create)                                       // User - สร้างการจอง
+	bookings.Delete("/:id/cancel", bookingHandler.Cancel)                           // User - ยกเลิกการจอง
+	bookings.Get("/", middleware.AdminOnly, bookingHandler.GetAll)                  // Admin only - ดูการจองทั้งหมด
+	bookings.Patch("/:id/status", middleware.AdminOnly, bookingHandler.UpdateStatus) // Admin only - อนุมัติ/ปฏิเสธ
+	bookings.Delete("/:id", middleware.AdminOnly, bookingHandler.Delete)            // Admin only - ลบการจอง
 
 	// Seed routes (Admin only - for testing)
 	seed := api.Group("/seed", middleware.AuthMiddleware, middleware.AdminOnly)

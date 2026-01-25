@@ -314,34 +314,17 @@ export const scheduleApi = {
 
 export const bookingApi = {
   /**
-   * Get public bookings (approved + pending, no auth required)
-   */
-  getPublic: async (params?: {
-    room_id?: number
-    date?: string
-    limit?: number
-  }): Promise<ApiResponse<Booking[]>> => {
-    const queryParams = new URLSearchParams()
-    if (params?.room_id) queryParams.append('room_id', params.room_id.toString())
-    if (params?.date) queryParams.append('date', params.date)
-    if (params?.limit) queryParams.append('limit', params.limit.toString())
-
-    const query = queryParams.toString()
-    return apiCall(`/bookings/public${query ? `?${query}` : ''}`)
-  },
-
-  /**
    * Get all bookings (Admin only)
    */
   getAll: async (params?: {
     status?: string
     room_id?: number
-    date?: string
+    booking_date?: string
   }): Promise<ApiResponse<Booking[]>> => {
     const queryParams = new URLSearchParams()
     if (params?.status) queryParams.append('status', params.status)
     if (params?.room_id) queryParams.append('room_id', params.room_id.toString())
-    if (params?.date) queryParams.append('date', params.date)
+    if (params?.booking_date) queryParams.append('booking_date', params.booking_date)
 
     const query = queryParams.toString()
     return apiCall(`/bookings${query ? `?${query}` : ''}`)

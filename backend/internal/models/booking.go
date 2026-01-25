@@ -17,7 +17,7 @@ type Booking struct {
 	BookingDate      time.Time `gorm:"type:date;not null;index:idx_room_date_time" json:"booking_date"`
 	StartTime        string    `gorm:"type:time;not null;index:idx_room_date_time" json:"start_time"`
 	EndTime          string    `gorm:"type:time;not null" json:"end_time"`
-	Status           string    `gorm:"type:varchar(20);not null;default:'pending';index" json:"status"`
+	Status           string    `gorm:"type:varchar(20);not null;default:'approved';index" json:"status"`
 	StatusNote       string    `gorm:"type:text" json:"status_note"` // เหตุผลการยกเลิก/ปฏิเสธ หรือหมายเหตุอื่นๆ
 	CreatedAt        time.Time `gorm:"default:now()" json:"created_at"`
 	UpdatedAt        time.Time `gorm:"default:now()" json:"updated_at"`
