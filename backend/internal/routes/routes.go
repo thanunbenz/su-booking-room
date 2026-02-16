@@ -1,8 +1,6 @@
 package routes
 
 import (
-	"log"
-
 	"github.com/gofiber/fiber/v2"
 	"github.com/thanunbenz/su-booking-room/internal/handlers"
 	"github.com/thanunbenz/su-booking-room/internal/middleware"
@@ -12,6 +10,8 @@ import (
 func SetupRoutes(app *fiber.App, db *gorm.DB) {
 	// Initialize handlers with DB connection
 	authHandler := handlers.NewAuthHandler(db)
+	userHandler := handlers.NewUserHandler(db)
+	roleHandler := handlers.NewRoleHandler(db)
 	buildingHandler := handlers.NewBuildingHandler(db)
 	roomHandler := handlers.NewRoomHandler(db)
 	scheduleHandler := handlers.NewFixedScheduleHandler(db)
@@ -61,36 +61,43 @@ func SetupRoutes(app *fiber.App, db *gorm.DB) {
 	schedules.Delete("/:id", middleware.AuthMiddleware, middleware.AdminOnly, scheduleHandler.Delete)    // Admin only
 	schedules.Post("/bulk", middleware.AuthMiddleware, middleware.AdminOnly, scheduleHandler.BulkCreate) // Admin only
 
-	// Booking routes (require authentication)
-	bookings := api.Group("/bookings", middleware.AuthMiddleware)
-	bookings.Get("/my", bookingHandler.GetMyBookings)                               // User - ดูการจองของตัวเอง
-	bookings.Get("/:id", bookingHandler.GetByID)                                    // User/Admin - ดูการจองตาม ID
-	bookings.Post("/", bookingHandler.Create)                                       // User - สร้างการจอง
-	bookings.Delete("/:id/cancel", bookingHandler.Cancel)                           // User - ยกเลิกการจอง
-	bookings.Get("/", middleware.AdminOnly, bookingHandler.GetAll)                  // Admin only - ดูการจองทั้งหมด
-	bookings.Patch("/:id/status", middleware.AdminOnly, bookingHandler.UpdateStatus) // Admin only - อนุมัติ/ปฏิเสธ
-	bookings.Delete("/:id", middleware.AdminOnly, bookingHandler.Delete)            // Admin only - ลบการจอง
+	// Booking routes - organized by specificity (specific routes before parameterized ones)
+	bookings := api.Group("/bookings")
+	// GET routes - ordered for proper query parameter handling
+	bookings.Get("/my", middleware.AuthMiddleware, bookingHandler.GetMyBookings)                                // User - ดูการจองของตัวเอง
+	bookings.Get("/",  bookingHandler.GetAll)                   // Admin only - ดูการจองทั้งหมด (supports ?status=, ?room_id=, ?booking_date= query params)
+	bookings.Get("/:id", middleware.AuthMiddleware, bookingHandler.GetByID)                                     // User/Admin - ดูการจองตาม ID
 
-	// Seed routes (Admin only - for testing)
-	seed := api.Group("/seed", middleware.AuthMiddleware, middleware.AdminOnly)
-	seed.Post("/all", seedHandler.SeedAll)     // สร้าง mock data ทั้งหมด
-	seed.Delete("/clear", seedHandler.ClearAll) // ลบข้อมูลทั้งหมด (ยกเว้น users)
+	// POST routes
+	bookings.Post("/", middleware.AuthMiddleware, bookingHandler.Create) // User - สร้างการจอง
 
-	// Log registered routes
-	printRoutes(app)
+	// PATCH routes
+	bookings.Patch("/:id/status", middleware.AuthMiddleware, middleware.AdminOnly, bookingHandler.UpdateStatus) // Admin only - อนุมัติ/ปฏิเสธ
+
+	// DELETE routes - specific paths before generic :id
+	bookings.Delete("/:id/cancel", middleware.AuthMiddleware, bookingHandler.Cancel)                            // User - ยกเลิกการจอง
+	bookings.Delete("/:id", middleware.AuthMiddleware, middleware.AdminOnly, bookingHandler.Delete)             // Admin only - ลบการจอง
+
+	// User routes (Admin only)
+	users := api.Group("/users")
+	users.Get("/", middleware.AuthMiddleware, middleware.AdminOnly, userHandler.GetAll)       // Admin only - ดู users ทั้งหมด
+	users.Get("/:id", middleware.AuthMiddleware, middleware.AdminOnly, userHandler.GetByID)   // Admin only - ดู user ตาม ID
+	users.Post("/", middleware.AuthMiddleware, middleware.AdminOnly, userHandler.Create)      // Admin only - สร้าง user
+	users.Put("/:id", middleware.AuthMiddleware, middleware.AdminOnly, userHandler.Update)    // Admin only - แก้ไข user
+	users.Delete("/:id", middleware.AuthMiddleware, middleware.AdminOnly, userHandler.Delete) // Admin only - ลบ user
+
+	// Role routes (Admin only)
+	roles := api.Group("/roles")
+	roles.Get("/", roleHandler.GetAll)                                                       // All - ดู roles ทั้งหมด (สำหรับ dropdown)
+	roles.Get("/:id", middleware.AuthMiddleware, middleware.AdminOnly, roleHandler.GetByID) // Admin only - ดู role ตาม ID
+	roles.Post("/", middleware.AuthMiddleware, middleware.AdminOnly, roleHandler.Create)    // Admin only - สร้าง role
+	roles.Put("/:id", middleware.AuthMiddleware, middleware.AdminOnly, roleHandler.Update)  // Admin only - แก้ไข role
+	roles.Delete("/:id", middleware.AuthMiddleware, middleware.AdminOnly, roleHandler.Delete) // Admin only - ลบ role
+
+	// Seed routes (Admin only - for development/testing)
+	seed := api.Group("/seed")
+	seed.Post("/all", middleware.AuthMiddleware, middleware.AdminOnly, seedHandler.SeedAll)    // Admin only - สร้าง mock data
+	seed.Delete("/clear", middleware.AuthMiddleware, middleware.AdminOnly, seedHandler.ClearAll) // Admin only - ลบข้อมูลทั้งหมด
 }
 
-// printRoutes แสดง routes ทั้งหมดที่ลงทะเบียนแล้ว
-func printRoutes(app *fiber.App) {
-	log.Println("")
-	log.Println("📋 Registered Routes:")
-	log.Println("==========================================")
-	routes := app.GetRoutes()
-	for _, route := range routes {
-		if route.Method != "" && route.Path != "" {
-			log.Printf("  %-6s %s", route.Method, route.Path)
-		}
-	}
-	log.Println("==========================================")
-	log.Println("")
-}
+

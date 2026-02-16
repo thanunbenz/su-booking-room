@@ -9,6 +9,7 @@ import type {
   RegisterRequest,
   LoginResponse,
   User,
+  Role,
   Building,
   CreateBuildingRequest,
   UpdateBuildingRequest,
@@ -22,6 +23,10 @@ import type {
   Booking,
   CreateBookingRequest,
   UpdateBookingStatusRequest,
+  CreateUserRequest,
+  UpdateUserRequest,
+  CreateRoleRequest,
+  UpdateRoleRequest,
 } from './types'
 
 // Base URL
@@ -381,6 +386,112 @@ export const bookingApi = {
    */
   delete: async (id: number): Promise<ApiResponse<null>> => {
     return apiCall(`/bookings/${id}`, {
+      method: 'DELETE',
+    })
+  },
+}
+
+// ===================================
+// User API
+// ===================================
+
+export const userApi = {
+  /**
+   * Get all users (Admin only)
+   */
+  getAll: async (params?: {
+    role_id?: number
+    search?: string
+  }): Promise<ApiResponse<User[]>> => {
+    const queryParams = new URLSearchParams()
+    if (params?.role_id) queryParams.append('role_id', params.role_id.toString())
+    if (params?.search) queryParams.append('search', params.search)
+
+    const query = queryParams.toString()
+    return apiCall(`/users${query ? `?${query}` : ''}`)
+  },
+
+  /**
+   * Get user by ID (Admin only)
+   */
+  getById: async (id: number): Promise<ApiResponse<User>> => {
+    return apiCall(`/users/${id}`)
+  },
+
+  /**
+   * Create new user (Admin only)
+   */
+  create: async (data: CreateUserRequest): Promise<ApiResponse<User>> => {
+    return apiCall('/users', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  },
+
+  /**
+   * Update user (Admin only)
+   */
+  update: async (id: number, data: UpdateUserRequest): Promise<ApiResponse<User>> => {
+    return apiCall(`/users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  },
+
+  /**
+   * Delete user (Admin only)
+   */
+  delete: async (id: number): Promise<ApiResponse<null>> => {
+    return apiCall(`/users/${id}`, {
+      method: 'DELETE',
+    })
+  },
+}
+
+// ===================================
+// Role API
+// ===================================
+
+export const roleApi = {
+  /**
+   * Get all roles
+   */
+  getAll: async (): Promise<ApiResponse<Role[]>> => {
+    return apiCall('/roles')
+  },
+
+  /**
+   * Get role by ID (Admin only)
+   */
+  getById: async (id: number): Promise<ApiResponse<Role>> => {
+    return apiCall(`/roles/${id}`)
+  },
+
+  /**
+   * Create new role (Admin only)
+   */
+  create: async (data: CreateRoleRequest): Promise<ApiResponse<Role>> => {
+    return apiCall('/roles', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  },
+
+  /**
+   * Update role (Admin only)
+   */
+  update: async (id: number, data: UpdateRoleRequest): Promise<ApiResponse<Role>> => {
+    return apiCall(`/roles/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  },
+
+  /**
+   * Delete role (Admin only)
+   */
+  delete: async (id: number): Promise<ApiResponse<null>> => {
+    return apiCall(`/roles/${id}`, {
       method: 'DELETE',
     })
   },

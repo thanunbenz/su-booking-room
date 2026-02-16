@@ -6,7 +6,7 @@ import { withAuth } from '@/lib/withAuth';
 import MainLayout from '@/components/layout/MainLayout';
 import { bookingApi, buildingApi, roomApi, scheduleApi } from '@/lib/api/client';
 import { Building, Room, Booking, FixedSchedule } from '@/lib/api/types';
-import { TbCalendar, TbClock, TbMapPin, TbUsers, TbFileText, TbTool, TbAlertCircle } from 'react-icons/tb';
+import { TbCalendar, TbClock, TbMapPin, TbFileText, TbTool, TbAlertCircle } from 'react-icons/tb';
 
 function BookingPage() {
   const router = useRouter();
@@ -48,7 +48,6 @@ function BookingPage() {
   }, [selectedBuildingId, rooms]);
 
   useEffect(() => {
-    // Load existing bookings and schedules when room and date are selected
     if (formData.room_id && formData.booking_date) {
       fetchAvailability();
     } else {
@@ -94,7 +93,7 @@ function BookingPage() {
       setBuildings(buildingsRes.data);
       setRooms(roomsRes.data);
       setFilteredRooms(roomsRes.data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError('ไม่สามารถโหลดข้อมูลได้');
       console.error('Error fetching data:', err);
     } finally {
@@ -106,7 +105,9 @@ function BookingPage() {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    // Convert room_id to number
+    const parsedValue = name === 'room_id' ? Number(value) : value;
+    setFormData({ ...formData, [name]: parsedValue });
     setError('');
     setSuccess('');
   };
@@ -149,7 +150,7 @@ function BookingPage() {
     try {
       setSubmitting(true);
       await bookingApi.create({
-        room_id: formData.room_id,
+        room_id: formData.room_id as number,
         title: formData.title.trim(),
         detail: formData.detail.trim(),
         equipment_request: formData.equipment_request.trim(),
@@ -158,8 +159,8 @@ function BookingPage() {
         end_time: formData.end_time,
       });
 
-      setSuccess('สร้างการจองสำเร็จ! รอการอนุมัติจากแอดมิน');
-
+      // setSuccess('สร้างการจองสำเร็จ! รอการอนุมัติจากแอดมิน');
+      setSuccess('สร้างการจองสำเร็จ! การจองของคุณได้รับการอนุมัติอัตโนมัติแล้ว');
       // Reset form
       setFormData({
         room_id: 0,
@@ -182,7 +183,7 @@ function BookingPage() {
       if (errorMessage.includes('Time slot is already booked')) {
         setError('ช่วงเวลานี้มีคนจองแล้ว กรุณาเลือกเวลาอื่น');
       } else if (errorMessage.includes('conflicts with fixed schedule')) {
-        setError('ช่วงเวลานี้มีตารางเรียนประจำ กรุณาเลือกเวลาอื่น');
+        setError('ช่วงเวลานี้มีตารางการจอง กรุณาเลือกเวลาอื่น');
       } else if (errorMessage.includes('Cannot book in the past')) {
         setError('ไม่สามารถจองย้อนหลังได้');
       } else if (errorMessage.includes('Start time must be before end time')) {
@@ -199,18 +200,12 @@ function BookingPage() {
     }
   };
 
-  const getRoomName = (roomId: number) => {
-    const room = rooms.find((r) => r.room_id === roomId);
-    return room ? room.name : '';
-  };
-
   const getBuildingName = (buildingId: number) => {
     const building = buildings.find((b) => b.building_id === buildingId);
     return building ? building.name : '';
   };
 
   const formatTime = (timeString: string) => {
-    // แปลง HH:MM:SS หรือ HH:MM ให้เป็น HH:MM
     if (!timeString) return '';
     const parts = timeString.split(':');
     return `${parts[0]}:${parts[1]}`;
@@ -423,11 +418,21 @@ function BookingPage() {
         </form>
 
         {/* Availability Display - Show when room and date are selected */}
-        {formData.room_id && formData.booking_date && (
+        {formData.room_id > 0 && formData.booking_date && (
           <div className="mt-6 bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
             <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
               <TbAlertCircle className="text-teal-700 dark:text-teal-500" />
-              การจองและตารางเรียนประจำ ({formData.booking_date})
+              การจองและตารางการจอง
+              {formData.booking_date && (
+                <span className="text-base font-normal text-gray-600 dark:text-gray-400">
+                  ({new Date(formData.booking_date).toLocaleDateString('th-TH', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    weekday: 'long'
+                  })})
+                </span>
+              )}
             </h2>
 
             {loadingAvailability ? (
@@ -439,7 +444,7 @@ function BookingPage() {
                 {/* Fixed Schedules */}
                 {fixedSchedules.length > 0 && (
                   <div className="mb-4">
-                    <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-2">ตารางเรียนประจำ:</h3>
+                    <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-2">ตารางการจอง:</h3>
                     <div className="space-y-2">
                       {fixedSchedules.map((schedule) => (
                         <div
@@ -474,11 +479,10 @@ function BookingPage() {
                       {existingBookings.map((booking) => (
                         <div
                           key={booking.booking_id}
-                          className={`p-3 rounded-lg border ${
-                            booking.status === 'approved'
-                              ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
-                              : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
-                          }`}
+                          className={`p-3 rounded-lg border ${booking.status === 'approved'
+                            ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                            : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
+                            }`}
                         >
                           <div className="flex items-center justify-between">
                             <div>
@@ -504,7 +508,7 @@ function BookingPage() {
                 {fixedSchedules.length === 0 && existingBookings.length === 0 && (
                   <div className="text-center py-4 text-gray-500 dark:text-gray-400">
                     <TbCalendar className="inline w-12 h-12 mb-2 opacity-50" />
-                    <p>ไม่มีการจองหรือตารางเรียนประจำในวันนี้</p>
+                    <p>ไม่มีการจองหรือตารางการจองในวันนี้</p>
                   </div>
                 )}
               </>

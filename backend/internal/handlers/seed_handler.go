@@ -61,7 +61,7 @@ func (h *SeedHandler) SeedAll(c *fiber.Ctx) error {
 		}
 	}
 
-	// 3. สร้าง Fixed Schedules (ตารางเรียนประจำ)
+	// 3. สร้าง Fixed Schedules (ตารางการจอง)
 	schedules := []models.FixedSchedule{
 		// อาคาร 1 ห้อง 101 - มีเรียนจันทร์ 09:00-12:00
 		{RoomID: rooms[0].RoomID, Subject: "CS101 โครงสร้างข้อมูล", TeacherName: "อ. สมชาย ใจดี", DayOfWeek: 1, StartTime: "09:00", EndTime: "12:00", Semester: "1/2567"},
@@ -79,14 +79,47 @@ func (h *SeedHandler) SeedAll(c *fiber.Ctx) error {
 		}
 	}
 
-	// 4. สร้าง Users (หา user ที่มีอยู่แล้วหรือสร้างใหม่)
-	var users []models.User
-	if err := h.DB.Find(&users).Error; err != nil {
-		return utils.InternalServerErrorResponse(c, "Failed to find users: "+err.Error())
+	// 4. สร้าง Mock Users (ทุก role)
+	// หา role IDs
+	var roles []models.Role
+	if err := h.DB.Find(&roles).Error; err != nil {
+		return utils.InternalServerErrorResponse(c, "Failed to find roles: "+err.Error())
 	}
 
-	if len(users) == 0 {
-		return utils.BadRequestResponse(c, "No users found. Please register users first before seeding bookings.")
+	if len(roles) == 0 {
+		return utils.BadRequestResponse(c, "No roles found. Please create roles first.")
+	}
+
+	// สร้าง password hash เดียวกันสำหรับทุกคน (password: "password123")
+	hashedPassword, err := utils.HashPassword("password123")
+	if err != nil {
+		return utils.InternalServerErrorResponse(c, "Failed to hash password: "+err.Error())
+	}
+
+	// หา role IDs (2=teacher, 3=visitor) - admin มีอยู่แล้ว
+	var teacherRole, visitorRole models.Role
+	for _, role := range roles {
+		if role.RoleName == "teacher" {
+			teacherRole = role
+		} else if role.RoleName == "visitor" {
+			visitorRole = role
+		}
+	}
+
+	users := []models.User{
+		// Teacher users (ไม่สร้าง admin เพราะมีอยู่แล้ว)
+		{Email: "teacher1@silpakorn.edu", Password: hashedPassword, Fullname: "อาจารย์สมชาย ใจดี", Username: "teacher1", RoleID: teacherRole.RoleID, CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		{Email: "teacher2@silpakorn.edu", Password: hashedPassword, Fullname: "อาจารย์สมหญิง รักเรียน", Username: "teacher2", RoleID: teacherRole.RoleID, CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		{Email: "teacher3@silpakorn.edu", Password: hashedPassword, Fullname: "ผศ. ดร. ปัญญา สุขใจ", Username: "teacher3", RoleID: teacherRole.RoleID, CreatedAt: time.Now(), UpdatedAt: time.Now()},
+
+		// Visitor user
+		{Email: "visitor@silpakorn.edu", Password: hashedPassword, Fullname: "ผู้เยี่ยมชม ทดสอบ", Username: "visitor", RoleID: visitorRole.RoleID, CreatedAt: time.Now(), UpdatedAt: time.Now()},
+	}
+
+	for i := range users {
+		if err := h.DB.Create(&users[i]).Error; err != nil {
+			return utils.InternalServerErrorResponse(c, "Failed to seed users: "+err.Error())
+		}
 	}
 
 	// 5. สร้าง Bookings
@@ -101,7 +134,7 @@ func (h *SeedHandler) SeedAll(c *fiber.Ctx) error {
 			RoomID:      rooms[0].RoomID,
 			Title:       "ประชุมโครงงาน",
 			Detail:      "ประชุมเตรียมนำเสนอโครงงานครั้งที่ 1",
-			BookingDate: tomorrow,
+			BookingDate: models.CustomDate{Time: tomorrow},
 			StartTime:   "09:00",
 			EndTime:     "11:00",
 			Status:      "pending",
@@ -113,7 +146,7 @@ func (h *SeedHandler) SeedAll(c *fiber.Ctx) error {
 			RoomID:      rooms[1].RoomID,
 			Title:       "ทำงานกลุ่ม",
 			Detail:      "ทำงานกลุ่มวิชา Data Science",
-			BookingDate: tomorrow,
+			BookingDate: models.CustomDate{Time: tomorrow},
 			StartTime:   "13:00",
 			EndTime:     "15:00",
 			Status:      "pending",
@@ -126,7 +159,7 @@ func (h *SeedHandler) SeedAll(c *fiber.Ctx) error {
 			RoomID:      rooms[2].RoomID,
 			Title:       "Workshop Python",
 			Detail:      "สอน Python พื้นฐานให้น้องๆ",
-			BookingDate: nextWeek,
+			BookingDate: models.CustomDate{Time: nextWeek},
 			StartTime:   "09:00",
 			EndTime:     "12:00",
 			Status:      "approved",
@@ -139,7 +172,7 @@ func (h *SeedHandler) SeedAll(c *fiber.Ctx) error {
 			RoomID:      rooms[4].RoomID,
 			Title:       "สอบกลางภาค",
 			Detail:      "สอบวิชา Web Development",
-			BookingDate: nextWeek,
+			BookingDate: models.CustomDate{Time: nextWeek},
 			StartTime:   "13:00",
 			EndTime:     "16:00",
 			Status:      "approved",
@@ -153,7 +186,7 @@ func (h *SeedHandler) SeedAll(c *fiber.Ctx) error {
 			RoomID:      rooms[0].RoomID,
 			Title:       "ซ้อมดนตรี",
 			Detail:      "ซ้อมดนตรีประกอบการแสดง",
-			BookingDate: tomorrow,
+			BookingDate: models.CustomDate{Time: tomorrow},
 			StartTime:   "16:00",
 			EndTime:     "18:00",
 			Status:      "rejected",
@@ -170,7 +203,7 @@ func (h *SeedHandler) SeedAll(c *fiber.Ctx) error {
 			RoomID:      rooms[5].RoomID,
 			Title:       "สัมมนาวิจัย",
 			Detail:      "นำเสนอผลงานวิจัยด้านคอมพิวเตอร์",
-			BookingDate: nextWeek,
+			BookingDate: models.CustomDate{Time: nextWeek},
 			StartTime:   "09:00",
 			EndTime:     "12:00",
 			Status:      "pending",
@@ -189,13 +222,14 @@ func (h *SeedHandler) SeedAll(c *fiber.Ctx) error {
 		"buildings_created": len(buildings),
 		"rooms_created":     len(rooms),
 		"schedules_created": len(schedules),
+		"users_created":     len(users),
 		"bookings_created":  len(bookings),
 	}, "Mock data seeded successfully")
 }
 
 // ClearAll - ลบข้อมูลทั้งหมด (ใช้เพื่อ reset database สำหรับทดสอบ)
 func (h *SeedHandler) ClearAll(c *fiber.Ctx) error {
-	// ลบข้อมูลทั้งหมด (ยกเว้น users และ roles)
+	// ลบข้อมูลทั้งหมด (ยกเว้น roles เท่านั้น)
 	if err := h.DB.Exec("DELETE FROM bookings").Error; err != nil {
 		return utils.InternalServerErrorResponse(c, "Failed to clear bookings: "+err.Error())
 	}
@@ -212,5 +246,9 @@ func (h *SeedHandler) ClearAll(c *fiber.Ctx) error {
 		return utils.InternalServerErrorResponse(c, "Failed to clear buildings: "+err.Error())
 	}
 
-	return utils.StandardResponse(c, fiber.StatusOK, nil, "All data cleared successfully (except users and roles)")
+	if err := h.DB.Exec("DELETE FROM users WHERE email != 'admin@silpakorn.edu'").Error; err != nil {
+		return utils.InternalServerErrorResponse(c, "Failed to clear users: "+err.Error())
+	}
+
+	return utils.StandardResponse(c, fiber.StatusOK, nil, "All data cleared successfully (except roles and main admin)")
 }

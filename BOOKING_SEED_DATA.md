@@ -9,6 +9,7 @@
 ### 1. เตรียมข้อมูลพื้นฐาน
 
 ก่อนสร้างข้อมูล bookings ต้องมีข้อมูลพื้นฐานดังนี้:
+
 - Users (ต้องมี user อย่างน้อย 1 คน)
 - Buildings (ตึก/อาคาร)
 - Rooms (ห้องเรียน)
@@ -66,7 +67,7 @@ VALUES
 ON CONFLICT DO NOTHING;
 ```
 
-### 3. สร้าง Fixed Schedules (ตารางเรียนประจำ)
+### 3. สร้าง Fixed Schedules (ตารางการจอง)
 
 ```sql
 -- หา room_id ก่อน
@@ -384,6 +385,7 @@ FROM (
 ## 💡 Tips & Best Practices
 
 ### 1. ตรวจสอบข้อมูลก่อน Insert
+
 ```sql
 -- ดู user_id ที่มีอยู่
 SELECT user_id, email, fullname FROM users;
@@ -401,6 +403,7 @@ WHERE NOT EXISTS (
 ```
 
 ### 2. หลีกเลี่ยงการจองซ้อนเวลา
+
 ```sql
 -- ตรวจสอบว่ามีการจองซ้อนเวลาหรือไม่
 SELECT b.*, r.name
@@ -415,6 +418,7 @@ WHERE b.room_id = 1  -- แทนที่ด้วย room_id ที่ต้�
 ```
 
 ### 3. ใช้ Transaction สำหรับ Insert หลายรายการ
+
 ```sql
 BEGIN;
 
@@ -437,6 +441,7 @@ COMMIT;
 ## 📞 ติดต่อ & สนับสนุน
 
 หากมีปัญหาหรือข้อสงสัย:
+
 - ดู error logs ที่ backend console
 - ตรวจสอบ constraints และ foreign keys
 - อ่าน [CLAUDE.md](./CLAUDE.md) สำหรับรายละเอียดเพิ่มเติม

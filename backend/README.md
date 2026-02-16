@@ -30,7 +30,7 @@ backend/
 │   │   ├── building.go          # อาคาร
 │   │   ├── room.go              # ห้อง
 │   │   ├── booking.go           # การจอง
-│   │   ├── fixed_schedule.go    # ตารางเรียนประจำ
+│   │   ├── fixed_schedule.go    # ตารางการจอง
 │   │   └── notification.go      # การแจ้งเตือน
 │   │
 │   ├── routes/                  # API route definitions
@@ -67,6 +67,7 @@ backend/
 ## ⚡ ทำไมถึงใช้โครงสร้างแบบง่าย?
 
 ### ข้อดี
+
 - ✅ **เข้าใจง่าย** - เหมือน Express.js controller
 - ✅ **Code สั้นลง** - ลดจาก 12 ไฟล์ เหลือ 3 ไฟล์ (-75%)
 - ✅ **พัฒนาเร็วขึ้น** - ไม่ต้องสร้างหลาย layer
@@ -74,6 +75,7 @@ backend/
 - ✅ **เหมาะกับ CRUD** - โปรเจกต์ขนาดเล็ก-กลาง
 
 ### เมื่อไหร่ควรใช้ 3-layer?
+
 - Business logic ซับซ้อนมาก
 - ต้อง reuse logic หลายที่
 - มีหลาย data source
@@ -82,6 +84,7 @@ backend/
 ## 🚀 การติดตั้งและใช้งาน
 
 ### Prerequisites
+
 - Go 1.25 หรือสูงกว่า
 - PostgreSQL 16
 - Docker & Docker Compose (แนะนำ)
@@ -118,6 +121,7 @@ make dev-backend
 ## 📝 API Endpoints
 
 ### Auth (Public)
+
 ```
 POST   /api/v1/auth/login      - Login
 POST   /api/v1/auth/register   - Register
@@ -125,6 +129,7 @@ GET    /api/v1/auth/me         - Get current user (Auth required)
 ```
 
 ### Buildings (Public Read, Admin Write)
+
 ```
 GET    /api/v1/buildings       - Get all buildings
 GET    /api/v1/buildings/:id   - Get building by ID
@@ -134,6 +139,7 @@ DELETE /api/v1/buildings/:id   - Delete building (Admin only)
 ```
 
 ### Rooms (Public Read, Admin Write)
+
 ```
 GET    /api/v1/rooms                  - Get all rooms
 GET    /api/v1/rooms/:id              - Get room by ID
@@ -144,6 +150,7 @@ DELETE /api/v1/rooms/:id              - Delete room (Admin only)
 ```
 
 ### Health Check
+
 ```
 GET    /api/v1/health          - Check API status
 ```
@@ -151,6 +158,7 @@ GET    /api/v1/health          - Check API status
 ## 🎯 ตัวอย่างการใช้งาน
 
 ### 1. Login
+
 ```bash
 curl -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
@@ -161,11 +169,13 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 ```
 
 ### 2. Get Buildings
+
 ```bash
 curl http://localhost:8080/api/v1/buildings
 ```
 
 ### 3. Create Building (Admin)
+
 ```bash
 curl -X POST http://localhost:8080/api/v1/buildings \
   -H "Content-Type: application/json" \
@@ -183,6 +193,7 @@ curl -X POST http://localhost:8080/api/v1/buildings \
 อ่านคู่มือโดยละเอียดที่ [QUICK_START_SIMPLE.md](QUICK_START_SIMPLE.md)
 
 **สรุป 4 ขั้นตอน:**
+
 1. สร้าง Model → `internal/models/`
 2. สร้าง Handler → `internal/handlers/`
 3. ลงทะเบียน Routes → `internal/routes/routes.go`
@@ -191,6 +202,7 @@ curl -X POST http://localhost:8080/api/v1/buildings \
 ### Pattern ที่ใช้บ่อย
 
 #### Query Database
+
 ```go
 // Get all
 h.DB.Find(&items)
@@ -209,6 +221,7 @@ h.DB.Delete(&item)
 ```
 
 #### Response
+
 ```go
 // Success
 return utils.StandardResponse(c, 200, data, "Success")
@@ -220,6 +233,7 @@ return utils.InternalServerErrorResponse(c, "Server error")
 ```
 
 #### Validation
+
 ```go
 if errors := utils.ValidateStruct(req); errors != nil {
     return utils.ValidationErrorResponse(c, errors)
@@ -245,6 +259,7 @@ docker build -t su-booking-backend .
 ## 🗄️ Database
 
 ### Default Users
+
 ```
 Admin:
   Email: admin@silpakorn.edu
@@ -253,6 +268,7 @@ Admin:
 ```
 
 ### Roles
+
 ```
 1 = Admin     - จัดการระบบทั้งหมด
 2 = Teacher   - จองห้อง ดูตารางตัวเอง
@@ -260,6 +276,7 @@ Admin:
 ```
 
 ### Reset Database
+
 ```bash
 # WARNING: ลบข้อมูลทั้งหมด!
 cd ..
@@ -267,6 +284,7 @@ make db-reset
 ```
 
 ### Database Shell
+
 ```bash
 cd ..
 make db-shell
@@ -275,6 +293,7 @@ make db-shell
 ## 🧪 API Testing
 
 ### ด้วย Postman
+
 ```bash
 # Import ไฟล์เหล่านี้เข้า Postman
 1. ../docs/api/SU_Booking_Room_Postman_Collection.json  # Collection
@@ -282,6 +301,7 @@ make db-shell
 ```
 
 ### ด้วย Bash Script (Automated)
+
 ```bash
 # ให้สิทธิ์ execute
 chmod +x ../docs/api/test_booking_api.sh
@@ -291,6 +311,7 @@ chmod +x ../docs/api/test_booking_api.sh
 ```
 
 ### ด้วย curl (Manual)
+
 ```bash
 # Login
 curl -X POST http://localhost:8000/api/v1/auth/login \
@@ -341,6 +362,7 @@ curl -X POST http://localhost:8000/api/v1/bookings \
 ## 🐛 Troubleshooting
 
 ### Port already in use
+
 ```bash
 # ตรวจสอบ process ที่ใช้ port 8080
 lsof -i :8080
@@ -350,6 +372,7 @@ kill -9 <PID>
 ```
 
 ### Database connection error
+
 ```bash
 # ตรวจสอบว่า PostgreSQL รันอยู่ไหม
 make status
@@ -359,6 +382,7 @@ make restart
 ```
 
 ### Migration failed
+
 อ่าน [MIGRATION_FIX.md](MIGRATION_FIX.md)
 
 ## 📄 License
@@ -367,7 +391,7 @@ This project is licensed under the MIT License.
 
 ## 👨‍💻 Authors
 
-- **Sumbenz** - *Initial work & Architecture*
+- **Sumbenz** - _Initial work & Architecture_
 
 ---
 

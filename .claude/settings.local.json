@@ -25,7 +25,22 @@
       "Bash(xargs kill:*)",
       "Bash(PGPASSWORD='' psql:*)",
       "Bash(chmod:*)",
-      "Bash(bash test_booking.sh:*)"
+      "Bash(bash test_booking.sh:*)",
+      "Bash(docker-compose ps:*)",
+      "Bash(go install:*)",
+      "Bash(go env:*)",
+      "Bash(echo:*)",
+      "Bash(tail:*)",
+      "Bash(go get:*)",
+      "Bash(docker ps:*)",
+      "Bash(docker exec:*)",
+      "Bash(npm run build:*)",
+      "Bash(PGPASSWORD=sumbenz2806 psql:*)",
+      "Bash(go run -c 'package main; import \\(\"\"fmt\"\"; \"\"golang.org/x/crypto/bcrypt\"\"\\); func main\\(\\) { hash, _ := bcrypt.GenerateFromPassword\\([]byte\\(\"\"password123\"\"\\), bcrypt.DefaultCost\\); fmt.Println\\(string\\(hash\\)\\) }')",
+      "Bash(go run:*)",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NzEyNDQ4NTcsImZ1bGxfbmFtZSI6IkFkbWluIFNpbHBha29ybiIsInJvbGVfaWQiOjEsInRva2VuX3R5cGUiOiJhY2Nlc3MiLCJ1c2VyX2lkIjoxfQ.owjy23WoDvN2_XibPP-OdHxaWg7hZwzgt1lQOlhrJmM\")",
+      "Bash(/Users/sumbenz/workspace/su-booking-room/backend)",
+      "Bash(/Users/sumbenz/go/bin/air:*)"
     ],
     "deny": [],
     "ask": []

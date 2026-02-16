@@ -13,7 +13,7 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { user, isAuthenticated } = useAuth();
-  const isAdmin = user?.role?.name === 'admin';
+  const isAdmin = user?.role?.role_name === 'admin';
 
   return (
     <aside
@@ -22,7 +22,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}
     >
       <div className="h-16 flex items-center justify-between px-4 border-b border-teal-600 dark:border-teal-700">
-        <h1 className="text-xl font-medium">ระบบจองห้องเรียน</h1>
+        <h1 className="text-xl font-medium">ระบบจองห้อง</h1>
         <button
           onClick={onClose}
           className="text-white hover:text-gray-200 focus:outline-none transition-colors cursor-pointer"

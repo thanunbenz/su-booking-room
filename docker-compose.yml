@@ -21,76 +21,10 @@ services:
     networks:
       - su-booking-network
 
-  # pgAdmin - PostgreSQL Management Tool
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: su-booking-pgadmin
-    restart: unless-stopped
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@su.ac.th
-      PGADMIN_DEFAULT_PASSWORD: admin123
-      PGADMIN_CONFIG_SERVER_MODE: 'False'
-      TZ: Asia/Bangkok
-    ports:
-      - "5050:80"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - su-booking-network
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
-
-  # Backend (Go + Fiber)
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: su-booking-backend
-    restart: unless-stopped
-    ports:
-      - "8000:8000"
-    environment:
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_USER: sumbenz
-      DB_PASSWORD: sumbenz2806
-      DB_NAME: su_booking_room
-      JWT_SECRET: su-booking-room-jwt-secret-key-change-in-production
-      PORT: 8000
-      TZ: Asia/Bangkok
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - su-booking-network
-    volumes:
-      - ./backend:/app
-    command: ["./main"]
-
-  # Frontend (Next.js)
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: su-booking-frontend
-    restart: unless-stopped
-    ports:
-      - "3000:3000"
-    environment:
-      NEXT_PUBLIC_API_URL: http://localhost:8000
-      NODE_ENV: production
-    depends_on:
-      - backend
-    networks:
-      - su-booking-network
-
 networks:
   su-booking-network:
     driver: bridge
 
 volumes:
   postgres_data:
-    driver: local
-  pgadmin_data:
     driver: local

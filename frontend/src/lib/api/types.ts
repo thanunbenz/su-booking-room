@@ -5,16 +5,21 @@
 // === User & Auth Types ===
 
 export interface Role {
-  id: number
-  name: 'admin' | 'teacher' | 'visitor'
+  role_id: number
+  role_name: 'admin' | 'teacher' | 'visitor'
+  description: string
+  created_at: string
 }
 
 export interface User {
-  id: number
+  user_id: number
+  role_id: number
   email: string
   fullname: string
+  username: string
   role: Role
   created_at: string
+  updated_at: string
 }
 
 export interface LoginRequest {
@@ -140,6 +145,8 @@ export interface Booking {
   status_note: string
   created_at: string
   updated_at: string
+  user?: User // Optional because it's only included when preloaded
+  room?: Room // Optional because it's only included when preloaded
 }
 
 export interface CreateBookingRequest {
@@ -155,6 +162,36 @@ export interface CreateBookingRequest {
 export interface UpdateBookingStatusRequest {
   status: BookingStatus
   status_note?: string
+}
+
+// === User Management Types ===
+
+export interface CreateUserRequest {
+  email: string
+  password: string
+  fullname: string
+  username: string
+  role_id: number
+}
+
+export interface UpdateUserRequest {
+  email?: string
+  password?: string
+  fullname?: string
+  username?: string
+  role_id?: number
+}
+
+// === Role Management Types ===
+
+export interface CreateRoleRequest {
+  role_name: string
+  description: string
+}
+
+export interface UpdateRoleRequest {
+  role_name?: string
+  description?: string
 }
 
 // === API Response Types ===

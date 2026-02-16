@@ -11,7 +11,7 @@ const sarabun = Sarabun({
 });
 
 export const metadata: Metadata = {
-  title: "ระบบจองห้องเรียน - มหาวิทยาลัยศิลปากร",
+  title: "ระบบจองห้อง - มหาวิทยาลัยศิลปากร",
   description: "ระบบจองห้องภาควิชาคอมพิวเตอร์ มหาวิทยาลัยศิลปากร",
 };
 

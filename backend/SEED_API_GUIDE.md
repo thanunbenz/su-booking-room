@@ -1,19 +1,23 @@
 # 🌱 Seed API - คู่มือการใช้งาน
 
 ## ภาพรวม
+
 Seed API สำหรับสร้าง mock data เพื่อทดสอบระบบจองห้อง
 
 ## API Endpoints
 
 ### 1. สร้าง Mock Data ทั้งหมด
+
 **POST** `/api/v1/seed/all`
 
 **Headers:**
+
 ```
 Authorization: Bearer {admin_token}
 ```
 
 **Response Success (201):**
+
 ```json
 {
   "status": 200,
@@ -28,6 +32,7 @@ Authorization: Bearer {admin_token}
 ```
 
 **ข้อมูลที่สร้าง:**
+
 - **3 ตึก:**
   - อาคาร 1 - อาคารเรียนรวมคณะวิทยาศาสตร์
   - อาคาร 2 - อาคารปฏิบัติการคอมพิวเตอร์
@@ -38,7 +43,7 @@ Authorization: Bearer {admin_token}
   - อาคาร 2: Lab 201 (35 ที่นั่ง), Lab 202 (45 ที่นั่ง), ห้อง 203 (60 ที่นั่ง)
   - อาคาร 3: ห้องประชุมใหญ่ (100 ที่นั่ง), ห้องประชุม 302 (25 ที่นั่ง)
 
-- **4 ตารางเรียนประจำ:**
+- **4 ตารางการจอง:**
   - CS101 โครงสร้างข้อมูล (จันทร์ 09:00-12:00)
   - CS102 ระบบฐานข้อมูล (พุธ 13:00-16:00)
   - CS201 ปัญญาประดิษฐ์ (อังคาร 09:00-12:00)
@@ -51,6 +56,7 @@ Authorization: Bearer {admin_token}
   - 1 Additional booking (ถ้ามี user ตัวที่ 2)
 
 **Notes:**
+
 - ต้อง login ด้วย admin account
 - ต้องมี user อย่างน้อย 1 คนในระบบก่อน
 - ถ้ามี building อยู่แล้วจะไม่สามารถ seed ได้ (ต้อง clear ก่อน)
@@ -58,14 +64,17 @@ Authorization: Bearer {admin_token}
 ---
 
 ### 2. ลบข้อมูลทั้งหมด
+
 **DELETE** `/api/v1/seed/clear`
 
 **Headers:**
+
 ```
 Authorization: Bearer {admin_token}
 ```
 
 **Response Success (200):**
+
 ```json
 {
   "status": 200,
@@ -75,6 +84,7 @@ Authorization: Bearer {admin_token}
 ```
 
 **ข้อมูลที่ถูกลบ:**
+
 - ✅ Buildings
 - ✅ Rooms
 - ✅ Fixed Schedules
@@ -87,6 +97,7 @@ Authorization: Bearer {admin_token}
 ## วิธีใช้งาน
 
 ### ขั้นตอนที่ 1: เริ่มต้น Database และ Backend
+
 ```bash
 # 1. Start PostgreSQL (Docker)
 docker start <postgres_container_id>
@@ -97,6 +108,7 @@ go run main.go
 ```
 
 ### ขั้นตอนที่ 2: Register และ Login (ถ้ายังไม่มี user)
+
 ```bash
 # Register admin user
 curl -X POST http://localhost:8000/api/v1/auth/register \
@@ -121,6 +133,7 @@ curl -X POST http://localhost:8000/api/v1/auth/login \
 ```
 
 ### ขั้นตอนที่ 3: สร้าง Mock Data
+
 ```bash
 # แทนที่ YOUR_TOKEN ด้วย access_token ที่ได้จากการ login
 curl -X POST http://localhost:8000/api/v1/seed/all \
@@ -128,6 +141,7 @@ curl -X POST http://localhost:8000/api/v1/seed/all \
 ```
 
 ### ขั้นตอนที่ 4: ตรวจสอบข้อมูล
+
 ```bash
 # ดู buildings
 curl http://localhost:8000/api/v1/buildings
@@ -144,6 +158,7 @@ curl http://localhost:8000/api/v1/bookings \
 ```
 
 ### ขั้นตอนที่ 5: ลบข้อมูล (เมื่อต้องการเริ่มใหม่)
+
 ```bash
 curl -X DELETE http://localhost:8000/api/v1/seed/clear \
   -H "Authorization: Bearer YOUR_TOKEN"
@@ -159,20 +174,20 @@ curl -X DELETE http://localhost:8000/api/v1/seed/clear \
 // seed-api.ts
 export const seedApi = {
   seedAll: async () => {
-    return apiCall('/seed/all', {
-      method: 'POST',
-    })
+    return apiCall("/seed/all", {
+      method: "POST",
+    });
   },
 
   clearAll: async () => {
-    return apiCall('/seed/clear', {
-      method: 'DELETE',
-    })
+    return apiCall("/seed/clear", {
+      method: "DELETE",
+    });
   },
-}
+};
 
 // ใช้งาน
-await seedApi.seedAll()
+await seedApi.seedAll();
 ```
 
 ---
@@ -180,39 +195,47 @@ await seedApi.seedAll()
 ## Error Handling
 
 ### Database Already Has Data
+
 ```json
 {
   "status": 400,
   "message": "Database already has data. Use /seed/clear first to reset."
 }
 ```
+
 **วิธีแก้:** เรียก DELETE `/api/v1/seed/clear` ก่อน
 
 ### No Users Found
+
 ```json
 {
   "status": 400,
   "message": "No users found. Please register users first before seeding bookings."
 }
 ```
+
 **วิธีแก้:** Register user ก่อน
 
 ### Unauthorized
+
 ```json
 {
   "status": 401,
   "message": "Missing or invalid token"
 }
 ```
+
 **วิธีแก้:** Login และใส่ token ใน Authorization header
 
 ### Forbidden (Not Admin)
+
 ```json
 {
   "status": 403,
   "message": "Admin access required"
 }
 ```
+
 **วิธีแก้:** ใช้ admin account
 
 ---
@@ -235,9 +258,9 @@ await seedApi.seedAll()
 
 ## สรุป API Routes
 
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|------|
-| POST | `/api/v1/seed/all` | สร้าง mock data ทั้งหมด | Admin |
+| Method | Endpoint             | Description                    | Auth  |
+| ------ | -------------------- | ------------------------------ | ----- |
+| POST   | `/api/v1/seed/all`   | สร้าง mock data ทั้งหมด        | Admin |
 | DELETE | `/api/v1/seed/clear` | ลบข้อมูลทั้งหมด (ยกเว้น users) | Admin |
 
 ---

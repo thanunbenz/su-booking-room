@@ -1,20 +1,23 @@
 # SU Booking Room
 
-ระบบจองห้องเรียน/ห้องประชุม สำหรับภาควิชาคอมพิวเตอร์ มหาวิทยาลัยศิลปากร
+ระบบจองห้อง/ห้องประชุม สำหรับภาควิชาคอมพิวเตอร์ มหาวิทยาลัยศิลปากร
 
 ## 📚 เอกสาร
 
 ### 📖 Guides
+
 - 🚀 **[Quick Start Guide](docs/guides/QUICK_START.md)** - เริ่มต้นใช้งานภายใน 5 นาที
 - 📘 **[Makefile Guide](docs/guides/MAKEFILE_GUIDE.md)** - คู่มือการใช้งาน Make commands ทั้งหมด
 - 📋 **[Makefile Cheatsheet](docs/guides/MAKEFILE_CHEATSHEET.md)** - คำสั่ง Make ฉบับย่อ
 
 ### 🧪 API Testing
+
 - 📝 **[Booking API Test Guide](docs/api/BOOKING_API_TEST.md)** - คู่มือทดสอบ Booking API ด้วย Postman
 - 📦 **[Postman Collection](docs/api/SU_Booking_Room_Postman_Collection.json)** - Import เข้า Postman ได้เลย
 - 🔧 **[Test Script](docs/api/test_booking_api.sh)** - Bash script ทดสอบอัตโนมัติ
 
 ### 🏗️ Architecture & Planning
+
 - 🏛️ **[Architecture](docs/architecture/ARCHITECTURE.md)** - สถาปัตยกรรมระบบ
 - 📝 **[Backend Plan](docs/planning/BACKEND_PLAN.md)** - แผนการพัฒนา Backend
 
@@ -28,10 +31,11 @@
 ## 👥 User Roles & Permissions
 
 ### 🔧 แอดมิน (Admin)
+
 - **จัดการข้อมูลพื้นฐาน**
   - สร้าง/ลบ/แก้ไข ข้อมูลตึกเรียน
   - สร้าง/ลบ/แก้ไข ข้อมูลห้องเรียน
-  - จัดการตารางเรียนประจำ (ใส่มือ ไม่มีดึงจาก reg)
+  - จัดการตารางการจอง (ใส่มือ ไม่มีดึงจาก reg)
 
 - **การจองและจัดการ**
   - จองห้องแทนอาจารย์หรือบุคคลภายนอก
@@ -46,6 +50,7 @@
   - เลือกได้ว่าจะปริ้นหรือไม่ปริ้นใบจอง
 
 ### 👨‍🏫 อาจารย์ (Teacher)
+
 - **การจองห้อง**
   - จองห้องได้ โดยระบบป้องกันการจองซ้ำกับคนอื่น
   - เลือกวันเดียวหรือจองหลายวันได้
@@ -56,25 +61,30 @@
   - ดูตารางการใช้ห้อง
 
 ### 👀 ผู้เยี่ยมชม (Visitor)
+
 - ดูตารางการใช้ห้อง (read-only)
 
 ## 📋 Features
 
 ### ✅ ระบบจัดการข้อมูลพื้นฐาน
+
 - จัดการอาคาร (Buildings)
 - จัดการห้อง (Rooms)
-- จัดการตารางเรียนประจำ (Fixed Schedule)
+- จัดการตารางการจอง (Fixed Schedule)
 
 ### ✅ ระบบจองห้อง
+
 - จองวันเดียวหรือหลายวัน (ทั้งแบบติดกัน และไม่ติดกัน)
 - ป้องกันการจองซ้ำ
 - ระบุอุปกรณ์เสริม (โน้ตบุ๊ก ฯลฯ) พร้อมช่อง "อื่น ๆ"
 - ปริ้นใบจอง (Optional)
 
 ### ✅ ระบบแจ้งเตือน
+
 - แจ้งเตือนเมื่อมีการยกเลิกการจอง
 
 ### ✅ ระบบจัดการผู้ใช้
+
 - บทบาทผู้ใช้ 3 ระดับ (Admin, Teacher, Visitor)
 - ระบบสิทธิ์การใช้งานตามบทบาท
 
@@ -95,6 +105,7 @@ make status
 ```
 
 **URLs:**
+
 - Frontend: http://localhost:3000
 - Backend API: http://localhost:8000
 - Database: localhost:5432
@@ -152,12 +163,13 @@ make install           # Install dependencies
 ## 🗄️ Database Schema
 
 ### Tables
+
 - **roles** - บทบาทผู้ใช้ (admin, teacher, visitor)
 - **users** - ข้อมูลผู้ใช้
 - **buildings** - อาคาร
 - **rooms** - ห้อง
 - **bookings** - การจองห้อง
-- **fixed_schedules** - ตารางเรียนประจำ
+- **fixed_schedules** - ตารางการจอง
 - **notifications** - การแจ้งเตือน
 
 ## 📁 Project Structure
@@ -203,6 +215,7 @@ cp .env.example .env
 ```
 
 แก้ไขค่าตามต้องการ:
+
 - `DB_HOST` - Database host (default: localhost)
 - `DB_PORT` - Database port (default: 5432)
 - `DB_USER` - Database user
@@ -253,6 +266,7 @@ npm start
 Backend API รันที่ `http://localhost:8000`
 
 ### ทดสอบ API ด้วย Postman
+
 ```bash
 # Import ไฟล์เหล่านี้เข้า Postman
 1. docs/api/SU_Booking_Room_Postman_Collection.json  # Collection
@@ -266,11 +280,13 @@ chmod +x docs/api/test_booking_api.sh
 ### Main Endpoints
 
 **Authentication**
+
 - `POST /api/v1/auth/login` - Login
 - `POST /api/v1/auth/register` - Register
 - `GET /api/v1/auth/me` - Get current user
 
 **Buildings**
+
 - `GET /api/v1/buildings` - Get all buildings
 - `GET /api/v1/buildings/:id` - Get building by ID
 - `POST /api/v1/buildings` - Create building (Admin only)
@@ -278,12 +294,14 @@ chmod +x docs/api/test_booking_api.sh
 - `DELETE /api/v1/buildings/:id` - Delete building (Admin only)
 
 **Rooms**
+
 - `GET /api/v1/rooms` - Get all rooms
 - `GET /api/v1/rooms/:id` - Get room by ID
 - `GET /api/v1/rooms/:id/availability` - Get room availability
 - `POST /api/v1/rooms` - Create room (Admin only)
 
 **Bookings**
+
 - `GET /api/v1/bookings/my` - Get my bookings
 - `GET /api/v1/bookings` - Get all bookings (Admin only)
 - `POST /api/v1/bookings` - Create booking
@@ -306,7 +324,7 @@ This project is licensed under the MIT License.
 
 ## 👨‍💻 Authors
 
-- **Sumbenz** - *Initial work*
+- **Sumbenz** - _Initial work_
 
 ## 🙏 Acknowledgments
 

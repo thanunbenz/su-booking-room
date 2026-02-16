@@ -9,6 +9,7 @@
 **ข้อดี:** UI ใช้งานง่าย, บันทึก request ได้, auto-save token
 
 **ขั้นตอน:**
+
 ```bash
 1. เปิด Postman Desktop หรือ Postman Web
 2. Import Collection: SU_Booking_Room_Postman_Collection.json
@@ -19,6 +20,7 @@
 ```
 
 **ไฟล์ที่ต้องใช้:**
+
 - `docs/api/SU_Booking_Room_Postman_Collection.json`
 - `docs/api/SU_Booking_Room_Postman_Environment.json`
 
@@ -31,6 +33,7 @@
 **ข้อดี:** รันทดสอบทุก endpoint พร้อมกันได้, เห็นผลทันที, ไม่ต้อง setup
 
 **ขั้นตอน:**
+
 ```bash
 # 1. ให้สิทธิ์ execute
 chmod +x docs/api/test_booking_api.sh
@@ -40,11 +43,13 @@ chmod +x docs/api/test_booking_api.sh
 ```
 
 **ผลลัพธ์:**
+
 - ✅ สีเขียว = ผ่าน
 - ❌ สีแดง = ไม่ผ่าน
 - ℹ️ สีเหลือง = ข้อมูล
 
 **ทดสอบอะไรบ้าง:**
+
 1. Login (Admin & User)
 2. Get current user
 3. Get buildings & rooms
@@ -66,6 +71,7 @@ chmod +x docs/api/test_booking_api.sh
 **ตัวอย่างพื้นฐาน:**
 
 #### 1. Login
+
 ```bash
 curl -X POST http://localhost:8000/api/v1/auth/login \
   -H "Content-Type: application/json" \
@@ -76,6 +82,7 @@ curl -X POST http://localhost:8000/api/v1/auth/login \
 ```
 
 #### 2. Create Booking
+
 ```bash
 # เก็บ token ก่อน
 TOKEN="your_access_token_here"
@@ -95,12 +102,14 @@ curl -X POST http://localhost:8000/api/v1/bookings \
 ```
 
 #### 3. Get My Bookings
+
 ```bash
 curl -X GET http://localhost:8000/api/v1/bookings/my \
   -H "Authorization: Bearer $TOKEN" | jq
 ```
 
 #### 4. Get Room Availability
+
 ```bash
 curl -X GET "http://localhost:8000/api/v1/rooms/1/availability?date=2026-01-25" | jq
 ```
@@ -110,44 +119,49 @@ curl -X GET "http://localhost:8000/api/v1/rooms/1/availability?date=2026-01-25" 
 ## 📊 Endpoint Reference (ฉบับย่อ)
 
 ### 🔐 Authentication (Public)
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/v1/auth/login` | Login |
-| POST | `/api/v1/auth/register` | Register |
-| GET | `/api/v1/auth/me` | Get current user (Auth required) |
+
+| Method | Endpoint                | Description                      |
+| ------ | ----------------------- | -------------------------------- |
+| POST   | `/api/v1/auth/login`    | Login                            |
+| POST   | `/api/v1/auth/register` | Register                         |
+| GET    | `/api/v1/auth/me`       | Get current user (Auth required) |
 
 ### 🏢 Buildings (Public Read, Admin Write)
-| Method | Endpoint | Permission |
-|--------|----------|------------|
-| GET | `/api/v1/buildings` | All |
-| GET | `/api/v1/buildings/:id` | All |
-| POST | `/api/v1/buildings` | Admin |
-| PUT | `/api/v1/buildings/:id` | Admin |
-| DELETE | `/api/v1/buildings/:id` | Admin |
+
+| Method | Endpoint                | Permission |
+| ------ | ----------------------- | ---------- |
+| GET    | `/api/v1/buildings`     | All        |
+| GET    | `/api/v1/buildings/:id` | All        |
+| POST   | `/api/v1/buildings`     | Admin      |
+| PUT    | `/api/v1/buildings/:id` | Admin      |
+| DELETE | `/api/v1/buildings/:id` | Admin      |
 
 ### 🚪 Rooms (Public Read, Admin Write)
-| Method | Endpoint | Permission |
-|--------|----------|------------|
-| GET | `/api/v1/rooms` | All |
-| GET | `/api/v1/rooms/:id` | All |
-| GET | `/api/v1/rooms/:id/availability` | All |
-| POST | `/api/v1/rooms` | Admin |
+
+| Method | Endpoint                         | Permission |
+| ------ | -------------------------------- | ---------- |
+| GET    | `/api/v1/rooms`                  | All        |
+| GET    | `/api/v1/rooms/:id`              | All        |
+| GET    | `/api/v1/rooms/:id/availability` | All        |
+| POST   | `/api/v1/rooms`                  | Admin      |
 
 ### 📅 Bookings (Mixed Permissions)
-| Method | Endpoint | Permission |
-|--------|----------|------------|
-| GET | `/api/v1/bookings/my` | Auth (own bookings) |
-| GET | `/api/v1/bookings` | Admin |
-| GET | `/api/v1/bookings/:id` | Owner or Admin |
-| POST | `/api/v1/bookings` | Auth |
-| PATCH | `/api/v1/bookings/:id/status` | Admin |
-| DELETE | `/api/v1/bookings/:id/cancel` | Owner or Admin |
+
+| Method | Endpoint                      | Permission          |
+| ------ | ----------------------------- | ------------------- |
+| GET    | `/api/v1/bookings/my`         | Auth (own bookings) |
+| GET    | `/api/v1/bookings`            | Admin               |
+| GET    | `/api/v1/bookings/:id`        | Owner or Admin      |
+| POST   | `/api/v1/bookings`            | Auth                |
+| PATCH  | `/api/v1/bookings/:id/status` | Admin               |
+| DELETE | `/api/v1/bookings/:id/cancel` | Owner or Admin      |
 
 ---
 
 ## 🔑 Default Users
 
 ### Admin
+
 ```
 Email: admin@silpakorn.edu
 Password: admin123
@@ -155,6 +169,7 @@ Role: Admin (can do everything)
 ```
 
 ### User
+
 ```
 Email: user@silpakorn.edu
 Password: user123
@@ -166,12 +181,14 @@ Role: Teacher (can book rooms)
 ## ✅ Validation Rules
 
 ### Booking Creation
+
 - ✓ `start_time` < `end_time` (ห้ามเวลาเริ่มมากกว่าเวลาสิ้นสุด)
 - ✓ `booking_date` >= today (ห้ามจองย้อนหลัง)
 - ✓ No time overlap (ห้ามจองซ้อนกับการจองอื่น)
-- ✓ No conflict with fixed schedules (ห้ามซ้อนกับตารางเรียนประจำ)
+- ✓ No conflict with fixed schedules (ห้ามซ้อนกับตารางการจอง)
 
 ### Time Format
+
 - Date: `YYYY-MM-DD` (เช่น `2026-01-25`)
 - Time: `HH:MM` (เช่น `14:00`, `16:30`)
 
@@ -180,6 +197,7 @@ Role: Teacher (can book rooms)
 ## ❌ Common Errors
 
 ### 400 Bad Request
+
 ```json
 {
   "success": false,
@@ -189,9 +207,11 @@ Role: Teacher (can book rooms)
   }
 }
 ```
+
 **แก้:** ตรวจสอบ validation rules
 
 ### 401 Unauthorized
+
 ```json
 {
   "success": false,
@@ -201,9 +221,11 @@ Role: Teacher (can book rooms)
   }
 }
 ```
+
 **แก้:** Login ใหม่และใส่ Bearer token
 
 ### 403 Forbidden
+
 ```json
 {
   "success": false,
@@ -213,9 +235,11 @@ Role: Teacher (can book rooms)
   }
 }
 ```
+
 **แก้:** ใช้ Admin account สำหรับ endpoint ที่ต้องการสิทธิ์ Admin
 
 ### 409 Conflict
+
 ```json
 {
   "success": false,
@@ -225,6 +249,7 @@ Role: Teacher (can book rooms)
   }
 }
 ```
+
 **แก้:** เลือกเวลาอื่นที่ไม่ซ้อนทับ
 
 ---
@@ -232,6 +257,7 @@ Role: Teacher (can book rooms)
 ## 🛠️ Troubleshooting
 
 ### Server ไม่ตอบสนอง
+
 ```bash
 # ตรวจสอบว่า backend รันอยู่ไหม
 curl http://localhost:8000/api/v1/health
@@ -243,6 +269,7 @@ make dev-backend
 ```
 
 ### Database error
+
 ```bash
 # Reset database
 make db-reset
@@ -252,6 +279,7 @@ make db-shell
 ```
 
 ### jq command not found (สำหรับ bash script)
+
 ```bash
 # macOS
 brew install jq

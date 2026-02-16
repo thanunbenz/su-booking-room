@@ -1,6 +1,6 @@
 package models
 
-// FixedSchedule - ตารางเรียนประจำ
+// FixedSchedule - ตารางการจอง
 type FixedSchedule struct {
 	ScheduleID  int    `gorm:"primaryKey;autoIncrement" json:"schedule_id"`
 	RoomID      int    `gorm:"not null;index:idx_room_day_time" json:"room_id"`

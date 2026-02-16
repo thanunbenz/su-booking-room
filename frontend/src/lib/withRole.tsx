@@ -34,7 +34,7 @@ export function withRole<P extends object>(
         if (!isAuthenticated) {
           // ยังไม่ได้ login → redirect ไป /login
           router.push('/login');
-        } else if (user && !allowedRoles.includes(user.role.name as RoleName)) {
+        } else if (user && !allowedRoles.includes(user.role.role_name as RoleName)) {
           // Login แล้วแต่ role ไม่ตรง → redirect ไปหน้าหลักพร้อม error
           router.push('/?error=forbidden');
         }
@@ -54,7 +54,7 @@ export function withRole<P extends object>(
     }
 
     // ไม่แสดงอะไรถ้ายังไม่ได้ login หรือ role ไม่ตรง (จะ redirect)
-    if (!isAuthenticated || !user || !allowedRoles.includes(user.role.name as RoleName)) {
+    if (!isAuthenticated || !user || !allowedRoles.includes(user.role.role_name as RoleName)) {
       return null;
     }
 

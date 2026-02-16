@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"strconv"
 	"time"
 
@@ -23,7 +24,7 @@ func NewBookingHandler(db *gorm.DB) *BookingHandler {
 func (h *BookingHandler) GetAll(c *fiber.Ctx) error {
 	var bookings []models.Booking
 
-	query := h.DB.Order("created_at DESC")
+	query := h.DB.Preload("User.Role").Order("created_at DESC")
 
 	// Filter by status
 	if status := c.Query("status"); status != "" {
@@ -41,8 +42,8 @@ func (h *BookingHandler) GetAll(c *fiber.Ctx) error {
         if err != nil {
             return utils.BadRequestResponse(c, "Invalid date format. Use YYYY-MM-DD")
         }
-        
         // Query โดยเปรียบเทียบแค่วันที่ (ไม่รวมเวลา)
+		print("asdas")
         query = query.Where("DATE(booking_date) = ?", parsedDate.Format("2006-01-02"))
     }
 
@@ -59,7 +60,7 @@ func (h *BookingHandler) GetByRoomAndDate(c *fiber.Ctx) error {
 	date := c.Query("date") // format: YYYY-MM-DD
 
 	var bookings []models.Booking
-	query := h.DB.Where("room_id = ? AND status IN (?, ?)", roomID, "pending", "approved").Order("start_time ASC")
+	query := h.DB.Preload("User.Role").Where("room_id = ? AND status IN (?, ?)", roomID, "pending", "approved").Order("start_time ASC")
 
 	// Filter by date if provided
 	if date != "" {
@@ -83,7 +84,7 @@ func (h *BookingHandler) GetMyBookings(c *fiber.Ctx) error {
 	userID := c.Locals("user_id").(uint)
 
 	var bookings []models.Booking
-	if err := h.DB.Where("user_id = ?", userID).Order("created_at DESC").Find(&bookings).Error; err != nil {
+	if err := h.DB.Preload("User.Role").Where("user_id = ?", userID).Order("created_at DESC").Find(&bookings).Error; err != nil {
 		return utils.InternalServerErrorResponse(c, err.Error())
 	}
 
@@ -95,7 +96,7 @@ func (h *BookingHandler) GetByID(c *fiber.Ctx) error {
 	id, _ := strconv.Atoi(c.Params("id"))
 
 	var booking models.Booking
-	if err := h.DB.First(&booking, "booking_id = ?", id).Error; err != nil {
+	if err := h.DB.Preload("User.Role").Preload("Room.Building").First(&booking, "booking_id = ?", id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return utils.NotFoundResponse(c, "Booking not found")
 		}
@@ -117,31 +118,50 @@ func (h *BookingHandler) GetByID(c *fiber.Ctx) error {
 func (h *BookingHandler) Create(c *fiber.Ctx) error {
 	var input models.Booking
 
+	fmt.Println("📥 Raw request body:", string(c.Body()))
+
 	// Parse body
 	if err := c.BodyParser(&input); err != nil {
+		fmt.Println("❌ Body parsing failed. Error:", err.Error())
 		return utils.BadRequestResponse(c, "Invalid request body")
 	}
+
+	fmt.Printf("✅ Parsed: RoomID=%d, Title='%s', Date=%v (IsZero=%v), Start='%s', End='%s'\n",
+		input.RoomID, input.Title, input.BookingDate.Time, input.BookingDate.IsZero(), input.StartTime, input.EndTime)
 
 	// ดึง userID จาก JWT token
 	userID := c.Locals("user_id").(uint)
 	input.UserID = int(userID)
 
-	// Validate required fields
-	if input.RoomID == 0 || input.Title == "" || input.BookingDate.IsZero() || input.StartTime == "" || input.EndTime == "" {
-		return utils.BadRequestResponse(c, "Missing required fields")
+	// Validate struct using validator
+	if validationErrors := utils.ValidateStruct(input); validationErrors != nil {
+		fmt.Printf("❌ Validation failed: %+v\n", validationErrors)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"success": false,
+			"error": fiber.Map{
+				"code":    "VALIDATION_ERROR",
+				"message": "Validation failed",
+				"details": validationErrors,
+			},
+		})
 	}
+	fmt.Println("✅ All required fields validated")
 
 	// Validate start_time < end_time
 	if input.StartTime >= input.EndTime {
+		fmt.Printf("❌ Time validation failed: start=%s, end=%s\n", input.StartTime, input.EndTime)
 		return utils.BadRequestResponse(c, "Start time must be before end time")
 	}
+	fmt.Println("✅ Time range is valid")
 
-	// Validate booking date is not in the past
-	today := time.Now().Truncate(24 * time.Hour)
-	bookingDate := input.BookingDate.Truncate(24 * time.Hour)
+	// Validate booking date is not in the past (compare in UTC to avoid timezone issues)
+	today := time.Now().UTC().Truncate(24 * time.Hour)
+	bookingDate := input.BookingDate.Time.UTC().Truncate(24 * time.Hour)
 	if bookingDate.Before(today) {
+		fmt.Printf("❌ Date validation failed: bookingDate=%v, today=%v\n", bookingDate, today)
 		return utils.BadRequestResponse(c, "Cannot book in the past")
 	}
+	fmt.Println("✅ Date is valid (not in the past)")
 
 	// ตรวจสอบว่าห้องมีอยู่จริง
 	var room models.Room
@@ -156,7 +176,7 @@ func (h *BookingHandler) Create(c *fiber.Ctx) error {
 	// Time overlap logic: existing.start_time < new.end_time AND existing.end_time > new.start_time
 	var conflictCount int64
 	h.DB.Model(&models.Booking{}).
-		Where("room_id = ? AND booking_date = ? AND status IN (?, ?)", input.RoomID, input.BookingDate, "pending", "approved").
+		Where("room_id = ? AND booking_date = ? AND status IN (?, ?)", input.RoomID, input.BookingDate.Time, "pending", "approved").
 		Where("start_time < ? AND end_time > ?", input.EndTime, input.StartTime).
 		Count(&conflictCount)
 
@@ -164,8 +184,8 @@ func (h *BookingHandler) Create(c *fiber.Ctx) error {
 		return utils.ConflictResponse(c, "Time slot is already booked")
 	}
 
-	// ตรวจสอบว่าเวลาไม่ซ้อนกับตารางเรียนประจำ
-	dayOfWeek := int(input.BookingDate.Weekday())
+	// ตรวจสอบว่าเวลาไม่ซ้อนกับตารางการจอง
+	dayOfWeek := int(input.BookingDate.Time.Weekday())
 	if dayOfWeek == 0 {
 		dayOfWeek = 7 // Sunday = 7
 	}
@@ -181,7 +201,7 @@ func (h *BookingHandler) Create(c *fiber.Ctx) error {
 	}
 
 	// Set default status
-	input.Status = "pending"
+	input.Status = "approved" // เปลี่ยนเป็น "pending" ถ้าต้องการให้ admin อนุมัติก่อน
 	input.CreatedAt = time.Now()
 	input.UpdatedAt = time.Now()
 

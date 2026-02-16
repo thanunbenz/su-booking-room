@@ -3,9 +3,11 @@
 import { useState, useEffect } from 'react';
 import { withRole } from '@/lib/withRole';
 import MainLayout from '@/components/layout/MainLayout';
-import { bookingApi, roomApi, buildingApi, authApi } from '@/lib/api/client';
+import Link from 'next/link';
+import { bookingApi, roomApi, buildingApi } from '@/lib/api/client';
 import { Booking, Room, Building, User, BookingStatus } from '@/lib/api/types';
-import { TbCalendar, TbCheck, TbX, TbTrash, TbUser, TbFilter } from 'react-icons/tb';
+import { TbCalendar, TbCheck, TbX, TbTrash, TbUser, TbFilter, TbEye, TbClock, TbMapPin } from 'react-icons/tb';
+import { HiOutlineOfficeBuilding } from 'react-icons/hi';
 
 interface BookingWithUser extends Booking {
   user?: User;
@@ -296,25 +298,27 @@ function ManageBookingsPage() {
                       </div>
                     </div>
 
-                    <div className="space-y-2 text-gray-600 dark:text-gray-300">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-gray-600 dark:text-gray-300">
                       <div className="flex items-center gap-2">
-                        <TbUser className="text-teal-700 dark:text-teal-500" />
-                        <span>ผู้จอง: User ID {booking.user_id}</span>
+                        <TbUser className="text-teal-700 dark:text-teal-500 text-lg" />
+                        <span className="text-sm"><span className="font-semibold">ผู้จอง:</span> {booking.user?.fullname || `User ID ${booking.user_id}`}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <TbCalendar className="text-teal-700 dark:text-teal-500" />
-                        <span>
-                          {getRoomName(booking.room_id)} - {getBuildingName(booking.room_id)}
-                        </span>
+                        <HiOutlineOfficeBuilding className="text-purple-600 dark:text-purple-400 text-lg" />
+                        <span className="text-sm"><span className="font-semibold">ตึก:</span> {getBuildingName(booking.room_id)}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <TbCalendar className="text-teal-700 dark:text-teal-500" />
-                        <span>{formatDate(booking.booking_date)}</span>
+                        <TbMapPin className="text-orange-600 dark:text-orange-400 text-lg" />
+                        <span className="text-sm"><span className="font-semibold">ห้อง:</span> {getRoomName(booking.room_id)}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <TbCalendar className="text-teal-700 dark:text-teal-500" />
-                        <span>
-                          {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
+                        <TbCalendar className="text-green-600 dark:text-green-400 text-lg" />
+                        <span className="text-sm"><span className="font-semibold">วันที่:</span> {formatDate(booking.booking_date)}</span>
+                      </div>
+                      <div className="flex items-center gap-2 md:col-span-2">
+                        <TbClock className="text-pink-600 dark:text-pink-400 text-lg" />
+                        <span className="text-sm">
+                          <span className="font-semibold">เวลา:</span> {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
                         </span>
                       </div>
                       {booking.detail && (
@@ -343,6 +347,15 @@ function ManageBookingsPage() {
 
                   {/* Right Side - Actions */}
                   <div className="flex lg:flex-col gap-2">
+                    {/* View Details Button */}
+                    <Link
+                      href={`/booking/${booking.booking_id}`}
+                      className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl transition-colors flex items-center gap-2 whitespace-nowrap justify-center"
+                    >
+                      <TbEye className="w-4 h-4" />
+                      ดูรายละเอียด
+                    </Link>
+
                     {booking.status === 'pending' && (
                       <>
                         <button

@@ -72,13 +72,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 
 	// Response
 	response := map[string]interface{}{
-		"user": map[string]interface{}{
-			"id":         user.UserID,
-			"email":      user.Email,
-			"fullname":   user.Fullname,
-			"role":       map[string]interface{}{"id": user.Role.RoleID, "name": user.Role.RoleName},
-			"created_at": user.CreatedAt.Format("2006-01-02T15:04:05Z"),
-		},
+		"user": user,
 		"tokens": map[string]interface{}{
 			"access_token":  accessToken,
 			"refresh_token": refreshToken,
@@ -132,16 +126,7 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 	// Load role relation
 	h.DB.Preload("Role").First(&user, user.UserID)
 
-	// Response
-	response := map[string]interface{}{
-		"id":         user.UserID,
-		"email":      user.Email,
-		"fullname":   user.Fullname,
-		"role":       map[string]interface{}{"id": user.Role.RoleID, "name": user.Role.RoleName},
-		"created_at": user.CreatedAt.Format("2006-01-02T15:04:05Z"),
-	}
-
-	return utils.StandardResponse(c, fiber.StatusCreated, response, "User registered successfully")
+	return utils.StandardResponse(c, fiber.StatusCreated, user, "User registered successfully")
 }
 
 // GetMe - GET /auth/me
@@ -161,14 +146,5 @@ func (h *AuthHandler) GetMe(c *fiber.Ctx) error {
 		return utils.InternalServerErrorResponse(c, err.Error())
 	}
 
-	// Response
-	response := map[string]interface{}{
-		"id":         user.UserID,
-		"email":      user.Email,
-		"fullname":   user.Fullname,
-		"role":       map[string]interface{}{"id": user.Role.RoleID, "name": user.Role.RoleName},
-		"created_at": user.CreatedAt.Format("2006-01-02T15:04:05Z"),
-	}
-
-	return utils.StandardResponse(c, fiber.StatusOK, response, "Success")
+	return utils.StandardResponse(c, fiber.StatusOK, user, "Success")
 }

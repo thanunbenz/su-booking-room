@@ -2,13 +2,14 @@
 
 ## สรุป Requirements
 
-ระบบจองห้องเรียนสำหรับภาควิชาคอมพิวเตอร์ มี 3 บทบาทผู้ใช้:
+ระบบจองห้องสำหรับภาควิชาคอมพิวเตอร์ มี 3 บทบาทผู้ใช้:
 
 ### 1. แอดมิน (Admin)
+
 - จัดการข้อมูลตึก/ห้อง (CRUD)
 - จองห้องแทนผู้อื่น (อาจารย์/บุคคลภายนอก/ภาคอื่น)
 - ยกเลิกการจองพร้อมแจ้งเตือน
-- จัดการตารางเรียนประจำ (ใส่มือ)
+- จัดการตารางการจอง (ใส่มือ)
 - ดูสถานะการจองทั้งหมด
 - จองหลายวัน (ติดกัน/ไม่ติดกัน)
 - ขออุปกรณ์เสริม + ช่อง "อื่นๆ"
@@ -16,6 +17,7 @@
 - ดูตารางการใช้ห้อง
 
 ### 2. อาจารย์ (Teacher)
+
 - จองห้อง (ป้องกันการจองซ้ำ)
 - จองวันเดียวหรือหลายวัน
 - ระบุอุปกรณ์
@@ -23,6 +25,7 @@
 - ดูตารางการใช้ห้อง
 
 ### 3. ผู้เยี่ยมชม (Visitor)
+
 - ดูตารางการใช้ห้อง (read-only)
 
 ---
@@ -30,6 +33,7 @@
 ## สถานะปัจจุบัน (อัปเดต: 2026-01-21)
 
 ### ✅ ทำเสร็จแล้ว
+
 - **Phase 1**: Setup Dependencies & Basic Utils
   - ✅ password.go (bcrypt)
   - ✅ jwt.go (JWT token generation/validation)
@@ -61,6 +65,7 @@
   - ✅ Docker support
 
 ### 🔄 กำลังดำเนินการ
+
 - ไม่มี
 
 ### ❌ ยังไม่ได้ทำ (Critical - ต้องทำก่อน Launch)
@@ -71,7 +76,7 @@
   - ❌ user_handler.go
   - ❌ role_handler.go
 
-- **Phase 6**: Fixed Schedule Management (ตารางเรียนประจำ)
+- **Phase 6**: Fixed Schedule Management (ตารางการจอง)
   - ✅ Fixed Schedule CRUD endpoints
   - ✅ fixed_schedule_handler.go
   - ✅ Bulk create schedules
@@ -94,6 +99,7 @@
   - ❌ Integration กับ booking events
 
 ### 🟡 Nice to Have (ทำทีหลังได้)
+
 - **Phase 9**: Additional Features
   - ❌ PDF generation (print booking)
   - ❌ Statistics & Reports
@@ -105,6 +111,7 @@
   - ❌ API documentation
 
 ### 📝 สังเกต
+
 - ไม่มี `repositories/` และ `services/` folders (handlers ทำงานกับ DB โดยตรง)
 - ควรพิจารณาแยก business logic ออกเป็น service layer สำหรับ Booking (เพราะมี logic ซับซ้อน)
 
@@ -115,11 +122,14 @@
 ### ความสำคัญสูงสุด (Must Have):
 
 #### 1. **Phase 7: Booking Management** 🔥 (ใหญ่ที่สุด - Core Feature)
+
 ไฟล์ที่ต้องสร้าง:
+
 - `internal/handlers/booking_handler.go` - Booking CRUD + Approval workflow
 - `internal/services/booking_service.go` (แนะนำ) - Business logic ซับซ้อน
 
 Endpoints ที่ต้องทำ (~15 endpoints):
+
 ```
 # CRUD
 GET    /api/v1/bookings                      [Admin]
@@ -144,6 +154,7 @@ GET    /api/v1/rooms/:id/availability        [All]
 ```
 
 Business Logic ที่ต้อง implement:
+
 - ✅ CheckConflict() - ตรวจสอบการจองซ้ำกับ approved bookings + fixed schedules
 - ✅ CreateMultipleBookings() - จองหลายวันพร้อม transaction
 - ✅ ApproveBooking() - อนุมัติ + สร้าง notification
@@ -155,11 +166,14 @@ Business Logic ที่ต้อง implement:
 
 ---
 
-#### 2. **Phase 6: Fixed Schedule Management** (ตารางเรียนประจำ)
+#### 2. **Phase 6: Fixed Schedule Management** (ตารางการจอง)
+
 ไฟล์ที่ต้องสร้าง:
+
 - `internal/handlers/fixed_schedule_handler.go`
 
 Endpoints ที่ต้องทำ (~7 endpoints):
+
 ```
 GET    /api/v1/schedules                [All]
 GET    /api/v1/schedules/:id            [All]
@@ -171,6 +185,7 @@ POST   /api/v1/schedules/bulk           [Admin]
 ```
 
 Business Logic:
+
 - ป้องกัน schedule ซ้ำกับห้องเดียวกัน วัน/เวลาเดียวกัน
 - Validate DayOfWeek (1-7) และ StartTime < EndTime
 - Bulk create สำหรับสร้างหลาย schedules พร้อมกัน
@@ -180,11 +195,14 @@ Business Logic:
 ---
 
 #### 3. **Phase 8: Notification System**
+
 ไฟล์ที่ต้องสร้าง:
+
 - `internal/handlers/notification_handler.go`
 - `internal/services/notification_service.go` (helper)
 
 Endpoints ที่ต้องทำ (~5 endpoints):
+
 ```
 GET    /api/v1/notifications             [Auth]
 GET    /api/v1/notifications/:id         [Auth]
@@ -194,6 +212,7 @@ DELETE /api/v1/notifications/:id         [Auth]
 ```
 
 Integration Points:
+
 - CreateBooking() → notification "รอการอนุมัติ"
 - ApproveBooking() → notification "อนุมัติแล้ว"
 - RejectBooking() → notification "ถูกปฏิเสธ"
@@ -206,7 +225,9 @@ Integration Points:
 ### ความสำคัญรอง (Optional - ทำทีหลังได้):
 
 #### 4. **Phase 4: User & Role Management**
+
 ไฟล์ที่ต้องสร้าง:
+
 - `internal/handlers/user_handler.go` (~5 endpoints)
 - `internal/handlers/role_handler.go` (~5 endpoints)
 
@@ -218,18 +239,18 @@ Integration Points:
 
 ## 📊 สรุปความคืบหน้า
 
-| Phase | สถานะ | ประมาณการเวลาที่เหลือ |
-|-------|------|---------------------|
-| Phase 1: Utils | ✅ เสร็จแล้ว | - |
-| Phase 2: Middleware | ✅ เสร็จแล้ว | - |
-| Phase 3: Auth | ✅ เสร็จแล้ว | - |
-| Phase 4: User/Role Management | ❌ ยังไม่ทำ | 1-2 วัน (Optional) |
-| Phase 5: Building/Room | ✅ เสร็จแล้ว (เกือบหมด) | - |
-| Phase 6: Fixed Schedule | ✅ เสร็จแล้ว | - |
-| **Phase 7: Booking** | **❌ ยังไม่ทำ** | **4-5 วัน (Critical - Core Feature)** |
-| Phase 8: Notification | ❌ ยังไม่ทำ | 1-2 วัน (Critical) |
-| Phase 9: PDF/Stats | ❌ ยังไม่ทำ | 2-3 วัน (Nice to have) |
-| Phase 10: Tests/Docs | ❌ ยังไม่ทำ | 2-3 วัน (Nice to have) |
+| Phase                         | สถานะ                   | ประมาณการเวลาที่เหลือ                 |
+| ----------------------------- | ----------------------- | ------------------------------------- |
+| Phase 1: Utils                | ✅ เสร็จแล้ว            | -                                     |
+| Phase 2: Middleware           | ✅ เสร็จแล้ว            | -                                     |
+| Phase 3: Auth                 | ✅ เสร็จแล้ว            | -                                     |
+| Phase 4: User/Role Management | ❌ ยังไม่ทำ             | 1-2 วัน (Optional)                    |
+| Phase 5: Building/Room        | ✅ เสร็จแล้ว (เกือบหมด) | -                                     |
+| Phase 6: Fixed Schedule       | ✅ เสร็จแล้ว            | -                                     |
+| **Phase 7: Booking**          | **❌ ยังไม่ทำ**         | **4-5 วัน (Critical - Core Feature)** |
+| Phase 8: Notification         | ❌ ยังไม่ทำ             | 1-2 วัน (Critical)                    |
+| Phase 9: PDF/Stats            | ❌ ยังไม่ทำ             | 2-3 วัน (Nice to have)                |
+| Phase 10: Tests/Docs          | ❌ ยังไม่ทำ             | 2-3 วัน (Nice to have)                |
 
 **รวมเวลาที่เหลือ (Critical only)**: 5-7 วันทำงาน
 **รวมเวลาทั้งหมด (รวม Optional)**: 12-19 วันทำงาน
@@ -241,6 +262,7 @@ Integration Points:
 เนื่องจาก **Booking Management คือ Core Feature** ที่ซับซ้อนและใหญ่ที่สุด ควรทำตามลำดับนี้:
 
 ### ลำดับที่แนะนำ:
+
 1. **Phase 6: Fixed Schedule Management** (1-2 วัน)
    → ต้องทำก่อน Booking เพราะ Booking ต้อง check conflict กับ Fixed Schedule
 
@@ -263,7 +285,9 @@ Integration Points:
 ### Phase 1: Setup Dependencies & Basic Utils
 
 #### 1.1 Setup Dependencies
+
 เพิ่ม libraries ที่จำเป็น:
+
 ```bash
 go get github.com/golang-jwt/jwt/v5
 go get golang.org/x/crypto/bcrypt
@@ -272,7 +296,9 @@ go get github.com/jung-kurt/gofpdf    # สำหรับสร้าง PDF (�
 ```
 
 #### 1.2 สร้าง Basic Utils
+
 **ไฟล์**: `internal/utils/`
+
 - `password.go` - HashPassword, ComparePassword (bcrypt)
 - `jwt.go` - GenerateToken, ValidateToken, ExtractClaims
 - `response.go` - StandardResponse, ErrorResponse, PaginatedResponse
@@ -283,7 +309,9 @@ go get github.com/jung-kurt/gofpdf    # สำหรับสร้าง PDF (�
 ### Phase 2: Middleware Setup
 
 #### 2.1 สร้าง Middleware
+
 **ไฟล์**: `internal/middleware/`
+
 - `auth.go` - JWT authentication middleware
 - `role.go` - Role-based authorization (AdminOnly, TeacherOrAdmin, etc.)
 - `error.go` - Global error handler
@@ -294,13 +322,17 @@ go get github.com/jung-kurt/gofpdf    # สำหรับสร้าง PDF (�
 ### Phase 3: 🎯 Login & Register (ทำให้เสร็จก่อนทุกอย่าง!)
 
 #### 3.1 สร้าง Auth System
+
 **ไฟล์**:
+
 - `internal/repositories/user_repository.go`
 - `internal/services/auth_service.go`
 - `internal/handlers/auth_handler.go`
 
 #### 3.2 Auth Endpoints
+
 **Endpoints สำคัญที่ต้องทำให้ใช้งานได้**:
+
 ```
 POST /api/v1/auth/register    - ลงทะเบียน (admin สร้างให้)
 POST /api/v1/auth/login       - เข้าสู่ระบบ ⭐ สำคัญที่สุด
@@ -308,6 +340,7 @@ GET  /api/v1/auth/me          - ดูข้อมูลตัวเอง (ต�
 ```
 
 **Endpoints เพิ่มเติม (ทำทีหลังได้)**:
+
 ```
 POST /api/v1/auth/refresh     - Refresh token
 PUT  /api/v1/auth/profile     - แก้ไขข้อมูลตัวเอง
@@ -315,7 +348,9 @@ PUT  /api/v1/auth/password    - เปลี่ยนรหัสผ่าน
 ```
 
 #### 3.3 Seed Data สำหรับ Test
+
 **ไฟล์**: `internal/seed/seeder.go`
+
 - สร้าง default roles (admin, teacher, visitor)
 - สร้าง admin user ตัวแรก สำหรับ login test
   ```
@@ -331,12 +366,15 @@ PUT  /api/v1/auth/password    - เปลี่ยนรหัสผ่าน
 ### Phase 4: User & Role Management (Admin เท่านั้น)
 
 #### 4.1 Role Management
+
 **ไฟล์**:
+
 - `internal/handlers/role_handler.go`
 - `internal/services/role_service.go`
 - `internal/repositories/role_repository.go`
 
 **Endpoints**:
+
 ```
 GET    /api/v1/roles          - ดู roles ทั้งหมด
 GET    /api/v1/roles/:id      - ดู role ตาม ID
@@ -346,12 +384,15 @@ DELETE /api/v1/roles/:id      - ลบ role [Admin]
 ```
 
 #### 4.2 User Management (CRUD)
+
 **ไฟล์**:
+
 - `internal/handlers/user_handler.go`
 - `internal/services/user_service.go`
 - (ใช้ repository จาก Phase 3)
 
 **Endpoints**:
+
 ```
 GET    /api/v1/users          - ดู users ทั้งหมด [Admin]
 GET    /api/v1/users/:id      - ดู user ตาม ID [Admin]
@@ -365,12 +406,15 @@ DELETE /api/v1/users/:id      - ลบ user [Admin]
 ### Phase 5: Building & Room Management
 
 #### 5.1 Building Management
+
 **ไฟล์**:
+
 - `internal/handlers/building_handler.go`
 - `internal/services/building_service.go`
 - `internal/repositories/building_repository.go`
 
 **Endpoints**:
+
 ```
 GET    /api/v1/buildings          - ดู buildings ทั้งหมด [All]
 GET    /api/v1/buildings/:id      - ดู building ตาม ID [All]
@@ -380,12 +424,15 @@ DELETE /api/v1/buildings/:id      - ลบ building [Admin]
 ```
 
 #### 5.2 Room Management
+
 **ไฟล์**:
+
 - `internal/handlers/room_handler.go`
 - `internal/services/room_service.go`
 - `internal/repositories/room_repository.go`
 
 **Endpoints**:
+
 ```
 GET    /api/v1/rooms                     - ดู rooms ทั้งหมด [All]
 GET    /api/v1/rooms/:id                 - ดู room ตาม ID [All]
@@ -401,11 +448,13 @@ GET    /api/v1/rooms/:id/availability    - ตรวจสอบความว�
 ### Phase 6: Fixed Schedule Management
 
 **ไฟล์**:
+
 - `internal/handlers/fixed_schedule_handler.go`
 - `internal/services/fixed_schedule_service.go`
 - `internal/repositories/fixed_schedule_repository.go`
 
 **Endpoints**:
+
 ```
 GET    /api/v1/schedules               - ดู schedules ทั้งหมด [All]
 GET    /api/v1/schedules/:id           - ดู schedule ตาม ID [All]
@@ -417,6 +466,7 @@ POST   /api/v1/schedules/bulk          - สร้างหลาย schedules [
 ```
 
 **Business Logic**:
+
 - ป้องกันการสร้าง schedule ซ้ำกับห้องเดียวกัน วัน/เวลาเดียวกัน
 - Validate DayOfWeek (1-7)
 - Validate StartTime < EndTime
@@ -426,12 +476,15 @@ POST   /api/v1/schedules/bulk          - สร้างหลาย schedules [
 ### Phase 7: Booking Management (Core Feature)
 
 **ไฟล์**:
+
 - `internal/handlers/booking_handler.go`
 - `internal/services/booking_service.go`
 - `internal/repositories/booking_repository.go`
 
 #### 7.1 Booking CRUD
+
 **Endpoints**:
+
 ```
 GET    /api/v1/bookings                 - ดู bookings ทั้งหมด [Admin]
 GET    /api/v1/bookings/my              - ดู bookings ของตัวเอง [Teacher/Admin]
@@ -443,7 +496,9 @@ DELETE /api/v1/bookings/:id             - ยกเลิก booking [Owner/Admi
 ```
 
 #### 7.2 Booking Approval (Admin only)
+
 **Endpoints**:
+
 ```
 PUT    /api/v1/bookings/:id/approve     - อนุมัติ [Admin]
 PUT    /api/v1/bookings/:id/reject      - ปฏิเสธ [Admin]
@@ -451,7 +506,9 @@ PUT    /api/v1/bookings/:id/cancel      - ยกเลิก [Admin]
 ```
 
 #### 7.3 Booking Queries
+
 **Endpoints**:
+
 ```
 GET    /api/v1/rooms/:id/bookings              - ดู bookings ของห้อง [All]
 GET    /api/v1/rooms/:id/bookings/date/:date   - ดู bookings ตามวัน [All]
@@ -462,6 +519,7 @@ GET    /api/v1/bookings/calendar/:month        - Calendar view [All]
 #### 7.4 Booking Approval Workflow
 
 **Status Flow**:
+
 ```
 pending → approved/rejected (by Admin)
 approved/pending → cancelled (by Admin/Owner)
@@ -469,12 +527,14 @@ approved → completed (auto, หลังเวลาจองผ่านไ�
 ```
 
 **กฎสำคัญ**:
+
 - ทุกการจอง (ทั้ง Teacher และ Admin จองให้) เริ่มที่ status = 'pending'
 - **ต้องอนุมัติทุกครั้ง** โดย Admin ก่อนใช้งานได้
 - เฉพาะ bookings ที่ status = 'approved' เท่านั้นที่จะ block ตารางห้อง
 - Pending bookings ไม่ block แต่ต้องแสดงในตารางให้เห็น (สีต่างกัน)
 
 #### 7.5 Business Logic สำคัญ
+
 **ใน `booking_service.go`**:
 
 1. **CheckConflict()** - ตรวจสอบการจองซ้ำ
@@ -518,11 +578,13 @@ approved → completed (auto, หลังเวลาจองผ่านไ�
 ### Phase 8: Notification System
 
 **ไฟล์**:
+
 - `internal/handlers/notification_handler.go`
 - `internal/services/notification_service.go`
 - `internal/repositories/notification_repository.go`
 
 **Endpoints**:
+
 ```
 GET    /api/v1/notifications           - ดู notifications ของตัวเอง [Auth]
 GET    /api/v1/notifications/:id       - ดู notification ตาม ID [Auth]
@@ -533,15 +595,16 @@ DELETE /api/v1/notifications/:id       - ลบ notification [Auth]
 
 **Notification Types & Triggers**:
 
-| Event | Type | Message | Recipient |
-|-------|------|---------|-----------|
-| สร้างการจอง | `booking_created` | "การจองของคุณถูกสร้างแล้ว รอการอนุมัติ" | ผู้จอง |
-| อนุมัติ | `booking_approved` | "การจองของคุณได้รับการอนุมัติแล้ว" | ผู้จอง |
-| ปฏิเสธ | `booking_rejected` | "การจองของคุณถูกปฏิเสธ: {เหตุผล}" | ผู้จอง |
-| ยกเลิก (by Admin) | `booking_cancelled` | "การจองของคุณถูกยกเลิก: {เหตุผล}" | ผู้จอง |
-| แจ้งเตือน (optional) | `booking_reminder` | "การจองของคุณจะเริ่มใน 1 ชั่วโมง" | ผู้จอง |
+| Event                | Type                | Message                                 | Recipient |
+| -------------------- | ------------------- | --------------------------------------- | --------- |
+| สร้างการจอง          | `booking_created`   | "การจองของคุณถูกสร้างแล้ว รอการอนุมัติ" | ผู้จอง    |
+| อนุมัติ              | `booking_approved`  | "การจองของคุณได้รับการอนุมัติแล้ว"      | ผู้จอง    |
+| ปฏิเสธ               | `booking_rejected`  | "การจองของคุณถูกปฏิเสธ: {เหตุผล}"       | ผู้จอง    |
+| ยกเลิก (by Admin)    | `booking_cancelled` | "การจองของคุณถูกยกเลิก: {เหตุผล}"       | ผู้จอง    |
+| แจ้งเตือน (optional) | `booking_reminder`  | "การจองของคุณจะเริ่มใน 1 ชั่วโมง"       | ผู้จอง    |
 
 **Implementation**:
+
 - สร้าง notification **ทันที** เมื่อมี state change
 - เก็บแค่ใน database (ไม่มี email/SMS ในระยะแรก)
 - Helper function: `CreateNotification(userID, bookingID, type, message string)`
@@ -556,12 +619,15 @@ DELETE /api/v1/notifications/:id       - ลบ notification [Auth]
 ### Phase 9: Additional Features
 
 #### 9.1 Print Booking Feature (PDF Generation)
+
 **Endpoint**:
+
 ```
 GET    /api/v1/bookings/:id/print      - Generate PDF ใบจอง [Owner/Admin]
 ```
 
 **Implementation**:
+
 - **ใช้ gofpdf library** สร้าง PDF ใน backend
 - Return PDF file (Content-Type: application/pdf)
 - Layout ใบจอง:
@@ -577,15 +643,19 @@ GET    /api/v1/bookings/:id/print      - Generate PDF ใบจอง [Owner/Adm
   - Footer: วันที่พิมพ์, ลายเซ็นผู้อนุมัติ (optional)
 
 **ไฟล์**:
+
 - `internal/utils/pdf.go` - PDF generator utility
 - `internal/handlers/booking_handler.go` - เพิ่ม PrintBooking handler
 
 **Note**:
+
 - สามารถปริ้นได้เฉพาะ booking ที่ status = approved หรือ completed
 - ถ้า pending/rejected → return error
 
 #### 9.2 Statistics & Reports (Admin)
+
 **Endpoints**:
+
 ```
 GET    /api/v1/stats/bookings          - สถิติการจอง [Admin]
 GET    /api/v1/stats/rooms/usage       - สถิติการใช้ห้อง [Admin]
@@ -593,7 +663,9 @@ GET    /api/v1/stats/users/activity    - สถิติผู้ใช้งา
 ```
 
 #### 9.3 Search & Filter
+
 เพิ่ม query parameters ใน existing endpoints:
+
 - `?search=keyword` - ค้นหาชื่อห้อง, ตึก, ผู้จอง
 - `?status=pending,approved` - กรองตาม status
 - `?date_from=2024-01-01&date_to=2024-12-31` - กรองตามวัน
@@ -602,7 +674,9 @@ GET    /api/v1/stats/users/activity    - สถิติผู้ใช้งา
 - `?page=1&limit=20` - Pagination
 
 #### 9.4 Seed Data (Optional)
+
 **ไฟล์**: `internal/seed/seeder.go`
+
 - สร้าง default roles (admin, teacher, visitor)
 - สร้าง admin user ตัวแรก
 - สร้างข้อมูลตัวอย่าง (buildings, rooms) สำหรับ development
@@ -612,21 +686,27 @@ GET    /api/v1/stats/users/activity    - สถิติผู้ใช้งา
 ### Phase 10: Testing & Documentation
 
 #### 10.1 Unit Tests
+
 สร้าง tests สำหรับ:
+
 - Utils (password, jwt, validation)
 - Services (business logic)
 - Repositories (database operations)
 
 **ตัวอย่างไฟล์**:
+
 - `internal/services/booking_service_test.go`
 - `internal/utils/password_test.go`
 
 #### 10.2 Integration Tests
+
 - API endpoint tests
 - Database integration tests
 
 #### 10.3 API Documentation
+
 สร้างไฟล์:
+
 - `docs/API.md` - รายละเอียด endpoints ทั้งหมด
 - `docs/AUTHENTICATION.md` - วิธีใช้งาน auth
 - หรือใช้ Swagger/OpenAPI spec
@@ -636,6 +716,7 @@ GET    /api/v1/stats/users/activity    - สถิติผู้ใช้งา
 ## ลำดับการทำงานที่แนะนำ
 
 ### ลำดับที่ 1 (Must Have - ก่อน launch)
+
 1. ✅ **Phase 1**: Setup Dependencies & Utils
 2. ✅ **Phase 2**: Middleware Setup
 3. ✅ **Phase 3**: 🎯 Login & Register (ทำให้เสร็จก่อนทุกอย่าง!)
@@ -646,10 +727,12 @@ GET    /api/v1/stats/users/activity    - สถิติผู้ใช้งา
 8. ✅ **Phase 8**: Notification System
 
 ### ลำดับที่ 2 (Should Have - หลัง launch)
+
 9. 🔄 **Phase 9**: Print, Statistics, Advanced Search
 10. 🔄 **Phase 10**: Tests & Documentation
 
 ### ลำดับที่ 3 (Nice to Have - future)
+
 - Export bookings (Excel, CSV)
 - Email notifications
 - SMS notifications
@@ -663,6 +746,7 @@ GET    /api/v1/stats/users/activity    - สถิติผู้ใช้งา
 ## โครงสร้าง Response Format มาตรฐาน
 
 ### Success Response
+
 ```json
 {
   "success": true,
@@ -672,6 +756,7 @@ GET    /api/v1/stats/users/activity    - สถิติผู้ใช้งา
 ```
 
 ### Error Response
+
 ```json
 {
   "success": false,
@@ -684,6 +769,7 @@ GET    /api/v1/stats/users/activity    - สถิติผู้ใช้งา
 ```
 
 ### Paginated Response
+
 ```json
 {
   "success": true,
@@ -722,6 +808,7 @@ MAX_PAGE_SIZE=100
 ### ไฟล์ใหม่ (ประมาณ 50+ ไฟล์)
 
 **Utils** (5 ไฟล์):
+
 - `internal/utils/password.go`
 - `internal/utils/jwt.go`
 - `internal/utils/response.go`
@@ -729,12 +816,14 @@ MAX_PAGE_SIZE=100
 - `internal/utils/pagination.go`
 
 **Middleware** (4 ไฟล์):
+
 - `internal/middleware/auth.go`
 - `internal/middleware/role.go`
 - `internal/middleware/error.go`
 - `internal/middleware/logger.go`
 
 **Repositories** (7 ไฟล์):
+
 - `internal/repositories/user_repository.go`
 - `internal/repositories/role_repository.go`
 - `internal/repositories/building_repository.go`
@@ -744,6 +833,7 @@ MAX_PAGE_SIZE=100
 - `internal/repositories/notification_repository.go`
 
 **Services** (7 ไฟล์):
+
 - `internal/services/auth_service.go`
 - `internal/services/user_service.go`
 - `internal/services/role_service.go`
@@ -754,6 +844,7 @@ MAX_PAGE_SIZE=100
 - `internal/services/notification_service.go`
 
 **Handlers** (7 ไฟล์):
+
 - `internal/handlers/auth_handler.go`
 - `internal/handlers/user_handler.go`
 - `internal/handlers/role_handler.go`
@@ -764,6 +855,7 @@ MAX_PAGE_SIZE=100
 - `internal/handlers/notification_handler.go`
 
 **Other**:
+
 - `internal/seed/seeder.go`
 - `.env` (update)
 
@@ -778,6 +870,7 @@ MAX_PAGE_SIZE=100
 ## Tips & Best Practices
 
 ### 1. Error Handling
+
 ```go
 // สร้าง custom errors
 type AppError struct {
@@ -788,6 +881,7 @@ type AppError struct {
 ```
 
 ### 2. Database Transactions
+
 ```go
 // ใช้ transaction สำหรับ operations ที่ซับซ้อน
 tx := config.DB.Begin()
@@ -796,6 +890,7 @@ tx.Commit() // or tx.Rollback()
 ```
 
 ### 3. Validation
+
 ```go
 // ใช้ struct tags
 type CreateBookingRequest struct {
@@ -806,6 +901,7 @@ type CreateBookingRequest struct {
 ```
 
 ### 4. Password Security
+
 ```go
 // ห้าม log password
 // ใช้ bcrypt cost ≥ 10
@@ -813,6 +909,7 @@ type CreateBookingRequest struct {
 ```
 
 ### 5. JWT Best Practices
+
 ```go
 // เก็บ user_id, role_id ใน claims
 // ใช้ expiry time สั้นๆ
@@ -820,6 +917,7 @@ type CreateBookingRequest struct {
 ```
 
 ### 6. Booking Conflict Logic
+
 ```go
 // Algorithm สำคัญ:
 // 1. Check fixed schedule first
@@ -833,6 +931,7 @@ type CreateBookingRequest struct {
 ## สรุป
 
 แผนนี้ครอบคลุม:
+
 - ✅ Authentication & Authorization (JWT + bcrypt)
 - ✅ Approval Workflow (ต้องอนุมัติทุกครั้ง)
 - ✅ ทุก CRUD operations (7 resources)
@@ -845,11 +944,13 @@ type CreateBookingRequest struct {
 - ✅ Role-based access control (3 roles)
 
 **จำนวนงานโดยประมาณ**:
+
 - ~55 ไฟล์ใหม่ (utils, middleware, repositories, services, handlers)
 - ~65 endpoints
 - ~3,500-5,500 บรรทัดโค้ด
 
 **เวลาที่คาดการณ์** (สำหรับ developer 1 คน):
+
 - Phase 1-2: 3-4 วัน (Auth + User management)
 - Phase 3-4: 2-3 วัน (Building/Room + Fixed schedules)
 - Phase 5: 5-6 วัน (Booking - ซับซ้อนที่สุด)
@@ -865,26 +966,31 @@ type CreateBookingRequest struct {
 ### 🔴 Critical Path (ต้องทำก่อน launch)
 
 **Week 1: Foundation + Login/Register**
+
 - [x] Phase 1: Setup Dependencies & Utils (password, jwt, response, validator) ✅
 - [x] Phase 2: Middleware (auth, role, error, logger) ✅
 - [x] Phase 3: 🎯 Login & Register (ต้องทำให้ใช้งานได้และ test ให้ผ่าน!) ✅
 - [ ] Phase 4: User & Role Management (Optional - ทำทีหลังได้)
 
 **Week 2: Resources**
+
 - [x] Phase 5: Building & Room Management ✅
 - [x] Phase 6: Fixed Schedule Management ✅
 - [ ] Phase 7.1-7.3: Booking CRUD + Queries 🔥 **← ต่อไปนี้**
 
 **Week 3: Booking Logic**
+
 - [ ] Phase 7.4-7.5: Approval Workflow + Business Logic 🔥
 - [ ] Phase 8: Notification System 🔥
 - [ ] Phase 9.1: PDF Generation (Optional)
 
 **Week 4 (Optional):**
+
 - [ ] Phase 9.2-9.3: Statistics + Search/Filter
 - [ ] Phase 10: Tests + Documentation
 
 ### 🟡 Nice to Have (หลัง launch)
+
 - [x] Seed data ✅ (มีแล้ว)
 - [ ] Advanced statistics
 - [ ] Email notifications
@@ -896,6 +1002,7 @@ type CreateBookingRequest struct {
 ## 🎯 ลำดับความสำคัญของงานที่เหลือ (Priority Order)
 
 ### Priority 1 - Must Have ก่อน Launch:
+
 1. ✅ ~~Phase 1-3: Foundation + Auth~~ (เสร็จแล้ว)
 2. ✅ ~~Phase 5: Building & Room~~ (เสร็จแล้ว)
 3. ✅ ~~Phase 6: Fixed Schedule Management~~ (เสร็จแล้ว)
@@ -903,9 +1010,11 @@ type CreateBookingRequest struct {
 5. 🔥 **Phase 8: Notification System**
 
 ### Priority 2 - Should Have:
+
 6. Phase 4: User & Role Management (ทำได้ทีหลัง)
 
 ### Priority 3 - Nice to Have:
+
 7. Phase 9: PDF, Statistics, Search/Filter
 8. Phase 10: Tests & Documentation
 
@@ -914,12 +1023,15 @@ type CreateBookingRequest struct {
 ## คำแนะนำสำคัญในการ Implement
 
 ### 1. เริ่มจาก Foundation
+
 ```
 Utils → Middleware → Auth → Resources
 ```
+
 ห้ามข้ามขั้นตอน เพราะทุกส่วนพึ่งพากัน
 
 ### 2. ใช้ Transaction สำหรับ Multi-day Booking
+
 ```go
 tx := config.DB.Begin()
 for _, date := range dates {
@@ -929,6 +1041,7 @@ tx.Commit() // หรือ tx.Rollback() ถ้า error
 ```
 
 ### 3. Conflict Check Algorithm
+
 ```sql
 SELECT COUNT(*) FROM bookings
 WHERE room_id = ?
@@ -941,6 +1054,7 @@ WHERE room_id = ?
 ```
 
 ### 4. Status Validation ทุกจุด
+
 ```go
 // ใช้ constants
 const (
@@ -953,6 +1067,7 @@ const (
 ```
 
 ### 5. PDF Generation
+
 ```go
 pdf := gofpdf.New("P", "mm", "A4", "")
 pdf.AddPage()
@@ -961,6 +1076,7 @@ return pdf.Output()
 ```
 
 ### 6. Notification Pattern
+
 ```go
 func (s *BookingService) ApproveBooking(id int) error {
     // 1. Update booking

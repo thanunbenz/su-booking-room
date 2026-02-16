@@ -129,7 +129,7 @@ function ManageSchedulesPage() {
               จัดการตารางเรียน
             </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-1">
-              เพิ่ม แก้ไข และลบตารางเรียนประจำในระบบ
+              เพิ่ม แก้ไข และลบตารางการจองในระบบ
             </p>
           </div>
           <div className="flex gap-2">
@@ -363,9 +363,8 @@ function ManageSchedulesPage() {
         {deletingScheduleId && (
           <DeleteConfirmModal
             title="ยืนยันการลบตารางเรียน"
-            message={`คุณแน่ใจหรือไม่ที่จะลบตารางเรียน "${
-              schedules.find((s) => s.schedule_id === deletingScheduleId)?.subject
-            }"? การดำเนินการนี้ไม่สามารถย้อนกลับได้`}
+            message={`คุณแน่ใจหรือไม่ที่จะลบตารางเรียน "${schedules.find((s) => s.schedule_id === deletingScheduleId)?.subject
+              }"? การดำเนินการนี้ไม่สามารถย้อนกลับได้`}
             onConfirm={() => handleDelete(deletingScheduleId)}
             onCancel={() => setDeletingScheduleId(null)}
           />

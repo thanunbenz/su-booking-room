@@ -167,12 +167,12 @@ export default function BuildingDetailPage() {
                 {/* Schedules */}
                 <div className="p-6">
                   <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                    ตารางเรียนประจำ
+                    ตารางการจอง
                   </h4>
 
                   {room.schedules.length === 0 ? (
                     <p className="text-gray-500 dark:text-gray-400 text-center py-8">
-                      ยังไม่มีตารางเรียนประจำ
+                      ยังไม่มีตารางการจอง
                     </p>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

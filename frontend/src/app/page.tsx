@@ -1,11 +1,11 @@
 'use client';
 
 import MainLayout from '@/components/layout/MainLayout';
-import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { Building, Room, FixedSchedule,Booking } from '@/lib/api/types';
-import { buildingApi, roomApi, scheduleApi,bookingApi } from '@/lib/api/client';
-import { IoLocationOutline } from 'react-icons/io5';
+// import Link from 'next/link';
+import { useEffect, useState, useMemo } from 'react';
+import { Building, Room, FixedSchedule, Booking } from '@/lib/api/types';
+import { buildingApi, roomApi, scheduleApi, bookingApi } from '@/lib/api/client';
+// import { IoLocationOutline } from 'react-icons/io5';
 import { TbCalendar, TbClock } from 'react-icons/tb';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -19,6 +19,9 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
+  // Memoize the date string for stable dependency
+  const selectedDateString = useMemo(() => selectedDate.toISOString().split('T')[0], [selectedDate]);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -28,7 +31,7 @@ export default function Home() {
           buildingApi.getAll(),
           roomApi.getAll(),
           scheduleApi.getAll(),
-          bookingApi.getAll({ booking_date: selectedDate.toISOString().split('T')[0] }),
+          bookingApi.getAll({ booking_date: selectedDateString }),
         ]);
 
         setBuildings(buildingsRes.data);
@@ -47,7 +50,7 @@ export default function Home() {
     if (!authLoading) {
       fetchData();
     }
-  }, [isAuthenticated, authLoading]);
+  }, [isAuthenticated, authLoading, selectedDateString]);
 
   if (loading) {
     return (
@@ -229,89 +232,92 @@ export default function Home() {
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-            ระบบจองห้องเรียน
+            ระบบจองห้อง
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            เลือกตึกเรียนเพื่อดูรายละเอียดห้องเรียนและตารางเรียนประจำ หรือดูรายการจองทั้งหมดในระบบ
+            เลือกตึกเรียนเพื่อดูรายละเอียดห้องเรียนและตารางการจอง หรือดูรายการจองทั้งหมดในระบบ
           </p>
         </div>
 
         {/* Schedule Table Section */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                    <TbCalendar className="text-teal-700 dark:text-teal-500" />
-                    ตารางเรียนประจำ
-                  </h2>
-                  <p className="text-gray-600 dark:text-gray-400 mt-1">
-                    {formatDate(selectedDate.toISOString())}
-                  </p>
-                </div>
+          <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                  <TbCalendar className="text-teal-700 dark:text-teal-500" />
+                  ตารางการจอง
+                </h2>
+                <p className="text-gray-600 dark:text-gray-400 mt-1">
+                  {formatDate(selectedDate.toISOString())}
+                </p>
+              </div>
 
-                {/* Date Selector */}
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => {
-                      const newDate = new Date(selectedDate);
-                      newDate.setDate(newDate.getDate() - 1);
-                      setSelectedDate(newDate);
-                    }}
-                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 rounded-lg transition-colors"
-                  >
-                    ← วันก่อน
-                  </button>
-                  <button
-                    onClick={() => setSelectedDate(new Date())}
-                    className="px-4 py-2 bg-teal-600 hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-600 text-white rounded-lg transition-colors"
-                  >
-                    วันนี้
-                  </button>
-                  <button
-                    onClick={() => {
-                      const newDate = new Date(selectedDate);
-                      newDate.setDate(newDate.getDate() + 1);
-                      setSelectedDate(newDate);
-                    }}
-                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 rounded-lg transition-colors"
-                  >
-                    วันถัดไป →
-                  </button>
-                </div>
+              {/* Date Selector */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    const newDate = new Date(selectedDate);
+                    newDate.setDate(newDate.getDate() - 1);
+                    setSelectedDate(newDate);
+                  }}
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 rounded-lg transition-colors"
+                >
+                  ← วันก่อน
+                </button>
+                <button
+                  onClick={() => setSelectedDate(new Date())}
+                  className="px-4 py-2 bg-teal-600 hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-600 text-white rounded-lg transition-colors"
+                >
+                  วันนี้
+                </button>
+                <button
+                  onClick={() => {
+                    const newDate = new Date(selectedDate);
+                    newDate.setDate(newDate.getDate() + 1);
+                    setSelectedDate(newDate);
+                  }}
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 rounded-lg transition-colors"
+                >
+                  วันถัดไป →
+                </button>
               </div>
             </div>
+          </div>
 
-            <div className="overflow-x-auto">
-              {Object.keys(getSchedulesByBuilding()).length === 0 ? (
-                <div className="text-center py-12">
-                  <p className="text-gray-500 dark:text-gray-400">ไม่พบตารางเรียน</p>
-                </div>
-              ) : (
-                <table className="w-full">
-                  <thead className="bg-gray-50 dark:bg-gray-700">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        อาคาร
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        ห้อง
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        เวลา
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        วิชา
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        อาจารย์
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                    {Object.entries(getSchedulesByBuilding())
-                      .sort((a, b) => a[1].building.name.localeCompare(b[1].building.name, 'th'))
-                      .map(([, buildingData]) => {
+          <div className="overflow-x-auto">
+            {Object.keys(getSchedulesByBuilding()).length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-gray-500 dark:text-gray-400">ไม่พบตารางเรียน</p>
+              </div>
+            ) : (
+              <table className="w-full">
+                <thead className="bg-gray-50 dark:bg-gray-700">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      อาคาร
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      ห้อง
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      เวลา
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      วิชา
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      อาจารย์
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      ประเภท
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                  {Object.entries(getSchedulesByBuilding())
+                    .sort((a, b) => a[1].building.name.localeCompare(b[1].building.name, 'th'))
+                    .map(([, buildingData]) => {
                       let buildingRowSpan = 0;
                       Object.values(buildingData.rooms).forEach((roomData) => {
                         buildingRowSpan += roomData.items.length;
@@ -322,110 +328,114 @@ export default function Home() {
                       return Object.entries(buildingData.rooms)
                         .sort((a, b) => a[1].room.name.localeCompare(b[1].room.name, 'th'))
                         .map(([, roomData]) => {
-                        return roomData.items.map((item, itemIndex) => {
-                          const isSchedule = item.type === 'schedule';
-                          const data = item.data;
+                          return roomData.items.map((item, itemIndex) => {
+                            const isSchedule = item.type === 'schedule';
+                            const data = item.data;
 
-                          // Determine styling based on type
-                          const rowBgClass = isSchedule
-                            ? 'bg-blue-50/30 dark:bg-blue-900/10'
-                            : item.data.status === 'approved'
-                            ? 'bg-green-50/30 dark:bg-green-900/10'
-                            : 'bg-yellow-50/30 dark:bg-yellow-900/10';
+                            console.log('Rendering item:', item);
 
-                          const row = (
-                            <tr
-                              key={isSchedule ? `schedule-${data.schedule_id}` : `booking-${data.booking_id}`}
-                              className={`hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${rowBgClass}`}
-                            >
-                              {/* Building Column */}
-                              {isFirstBuildingRow && itemIndex === 0 && (
-                                <td
-                                  rowSpan={buildingRowSpan}
-                                  className="px-6 py-4 text-sm font-bold text-teal-700 dark:text-teal-400 border-r-2 border-teal-200 dark:border-teal-700 bg-teal-50/50 dark:bg-teal-900/10"
-                                >
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-lg">{buildingData.building.name}</span>
-                                  </div>
-                                </td>
-                              )}
+                            // Determine styling based on type
+                            const rowBgClass = isSchedule
+                              ? 'bg-blue-50/30 dark:bg-blue-900/10'
+                              : (item.data as Booking).status === 'approved'
+                                ? 'bg-green-50/30 dark:bg-green-900/10'
+                                : 'bg-yellow-50/30 dark:bg-yellow-900/10';
 
-                              {/* Room Column */}
-                              {itemIndex === 0 && (
-                                <td
-                                  rowSpan={roomData.items.length}
-                                  className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-700"
-                                >
-                                  {roomData.room.name}
-                                </td>
-                              )}
-
-                              {/* Time Column */}
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="flex items-center gap-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-                                  <TbClock className="h-4 w-4 text-teal-600 dark:text-teal-400" />
-                                  <span>
-                                    {formatTime(data.start_time)} - {formatTime(data.end_time)}
-                                  </span>
-                                </div>
-                              </td>
-
-                              {/* Title/Subject Column */}
-                              <td className="px-6 py-4">
-                                <div className="text-sm font-bold text-gray-900 dark:text-white">
-                                  {isSchedule ? data.subject : data.title}
-                                </div>
-                                {!isSchedule && data.detail && (
-                                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                    {data.detail}
-                                  </div>
+                            const row = (
+                              <tr
+                                key={isSchedule ? `schedule-${(data as FixedSchedule).schedule_id}` : `booking-${(data as Booking).booking_id}`}
+                                className={`hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${rowBgClass}`}
+                              >
+                                {/* Building Column */}
+                                {isFirstBuildingRow && itemIndex === 0 && (
+                                  <td
+                                    rowSpan={buildingRowSpan}
+                                    className="px-6 py-4 text-sm font-bold text-teal-700 dark:text-teal-400 border-r-2 border-teal-200 dark:border-teal-700 bg-teal-50/50 dark:bg-teal-900/10"
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-lg">{buildingData.building.name}</span>
+                                    </div>
+                                  </td>
                                 )}
-                              </td>
 
-                              {/* Teacher/User Column */}
-                              <td className="px-6 py-4">
-                                <div className="text-sm text-gray-700 dark:text-gray-300">
-                                  {isSchedule ? data.teacher_name : `ผู้ใช้ ID: ${data.user_id}`}
-                                </div>
-                              </td>
+                                {/* Room Column */}
+                                {itemIndex === 0 && (
+                                  <td
+                                    rowSpan={roomData.items.length}
+                                    className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-700"
+                                  >
+                                    {roomData.room.name}
+                                  </td>
+                                )}
 
-                              {/* Type Column */}
-                              <td className="px-6 py-4">
-                                {isSchedule ? (
-                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                                    ตารางเรียน
-                                  </span>
-                                ) : (
-                                  <span
-                                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                      data.status === 'approved'
+                                {/* Time Column */}
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="flex items-center gap-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    <TbClock className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+                                    <span>
+                                      {formatTime(data.start_time)} - {formatTime(data.end_time)}
+                                    </span>
+                                  </div>
+                                </td>
+
+                                {/* Title/Subject Column */}
+                                <td className="px-6 py-4">
+                                  <div className="text-sm font-bold text-gray-900 dark:text-white">
+                                    {isSchedule ? (data as FixedSchedule).subject : (data as Booking).title}
+                                  </div>
+                                  {!isSchedule && (data as Booking).detail && (
+                                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                      {(data as Booking).detail}
+                                    </div>
+                                  )}
+                                </td>
+
+                                {/* Teacher/User Column */}
+                                <td className="px-6 py-4">
+                                  <div className="text-sm text-gray-700 dark:text-gray-300">
+                                    {isSchedule
+                                      ? (data as FixedSchedule).teacher_name
+                                      : (data as Booking).user?.fullname || `ผู้ใช้ ID: ${(data as Booking).user_id}`
+                                    }
+                                  </div>
+                                </td>
+
+                                {/* Type Column */}
+                                <td className="px-6 py-4">
+                                  {isSchedule ? (
+                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                      ตารางเรียน
+                                    </span>
+                                  ) : (
+                                    <span
+                                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${(data as Booking).status === 'approved'
                                         ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                                         : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-                                    }`}
-                                  >
-                                    {data.status === 'approved' ? 'จองแล้ว (อนุมัติ)' : 'รอการอนุมัติ'}
-                                  </span>
-                                )}
-                              </td>
-                            </tr>
-                          );
+                                        }`}
+                                    >
+                                      {(data as Booking).status === 'approved' ? 'จองแล้ว (อนุมัติ)' : 'รอการอนุมัติ'}
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
 
-                          if (isFirstBuildingRow && itemIndex === 0) {
-                            isFirstBuildingRow = false;
-                          }
+                            if (isFirstBuildingRow && itemIndex === 0) {
+                              isFirstBuildingRow = false;
+                            }
 
-                          return row;
+                            return row;
+                          });
                         });
-                      });
                     })}
-                  </tbody>
-                </table>
-              )}
-            </div>
+                </tbody>
+              </table>
+            )}
           </div>
+        </div>
 
         {/* Building List Section */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+        {/* <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
           <div className="p-6 border-b border-gray-200 dark:border-gray-700">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
               ตึกเรียนทั้งหมด
@@ -468,7 +478,7 @@ export default function Home() {
               </div>
             )}
           </div>
-        </div>
+        </div> */}
       </div>
     </MainLayout>
   );

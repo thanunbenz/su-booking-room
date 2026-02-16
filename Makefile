@@ -1,4 +1,4 @@
-.PHONY: help up down build logs clean restart dev-backend dev-frontend migrate test
+.PHONY: help up down build logs clean restart dev dev-backend dev-frontend migrate test
 
 # Colors for output
 BLUE := \033[0;34m
@@ -10,20 +10,25 @@ NC := \033[0m # No Color
 # Detect docker-compose command (V1 or V2)
 DOCKER_COMPOSE := $(shell if command -v docker-compose > /dev/null 2>&1; then echo "docker-compose"; else echo "docker compose"; fi)
 
+# Detect Air command (use full path if not in PATH)
+AIR := $(shell which air 2>/dev/null || echo "$(HOME)/go/bin/air")
+
 help: ## Show this help message
 	@echo "$(BLUE)SU Booking Room - Available Commands:$(NC)"
 	@echo ""
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(GREEN)%-15s$(NC) %s\n", $$1, $$2}'
 
 # Docker Commands
-up: ## Start all services with Docker Compose
-	@echo "$(BLUE)Starting all services...$(NC)"
+up: ## Start database service with Docker Compose
+	@echo "$(BLUE)Starting database...$(NC)"
 	$(DOCKER_COMPOSE) up -d
-	@echo "$(GREEN)✓ All services started!$(NC)"
-	@echo "$(YELLOW)Frontend: http://localhost:3000$(NC)"
-	@echo "$(YELLOW)Backend:  http://localhost:8000$(NC)"
+	@echo "$(GREEN)✓ Database started!$(NC)"
 	@echo "$(YELLOW)Database: localhost:5432$(NC)"
-	@echo "$(YELLOW)Database Admin: http://localhost:5050$(NC)"
+	@echo ""
+	@echo "$(BLUE)To run backend and frontend locally:$(NC)"
+	@echo "  $(GREEN)make dev-backend$(NC)  - Run backend with hot reload"
+	@echo "  $(GREEN)make dev-frontend$(NC) - Run frontend with hot reload"
+	@echo "  $(GREEN)make dev$(NC)          - Run both with hot reload"
 
 down: ## Stop all services
 	@echo "$(BLUE)Stopping all services...$(NC)"
@@ -60,29 +65,23 @@ logs-db: ## Show database logs
 	$(DOCKER_COMPOSE) logs -f postgres
 
 # Development Commands
-dev-backend: ## Run backend in development mode
-	@echo "$(BLUE)Starting backend in development mode...$(NC)"
-	cd backend && go run main.go
+dev: ## Run both backend and frontend in development mode with hot reload
+	@echo "$(BLUE)Starting development environment with hot reload...$(NC)"
+	@echo "$(YELLOW)Backend:  http://localhost:8000$(NC)"
+	@echo "$(YELLOW)Frontend: http://localhost:3000$(NC)"
+	@echo "$(YELLOW)Press Ctrl+C to stop both services$(NC)"
+	@echo ""
+	@trap 'kill 0' EXIT; \
+	(cd backend && $(AIR)) & \
+	(cd frontend && npm run dev)
 
-dev-frontend: ## Run frontend in development mode
-	@echo "$(BLUE)Starting frontend in development mode...$(NC)"
+dev-backend: ## Run backend in development mode with hot reload
+	@echo "$(BLUE)Starting backend in development mode with hot reload...$(NC)"
+	cd backend && $(AIR)
+
+dev-frontend: ## Run frontend in development mode with hot reload
+	@echo "$(BLUE)Starting frontend in development mode with hot reload...$(NC)"
 	cd frontend && npm run dev
-
-# Database Commands
-db-shell: ## Open PostgreSQL shell
-	$(DOCKER_COMPOSE) exec postgres psql -U sumbenz -d su_booking_room
-
-db-reset: ## Reset database (⚠️ WARNING: This will delete all data!)
-	@echo "$(RED)⚠️  WARNING: This will delete all data!$(NC)"
-	@read -p "Are you sure? [y/N] " -n 1 -r; \
-	echo; \
-	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
-		$(DOCKER_COMPOSE) down -v; \
-		$(DOCKER_COMPOSE) up -d postgres; \
-		echo "$(GREEN)✓ Database reset complete!$(NC)"; \
-	else \
-		echo "$(YELLOW)Database reset cancelled.$(NC)"; \
-	fi
 
 # Cleanup Commands
 clean: ## Clean up Docker resources

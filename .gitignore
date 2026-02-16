@@ -24,10 +24,15 @@ logs/
 tmp/
 temp/
 *.tmp
+*.pid
+backend.log
+frontend.log
 
 # Backend specific
 backend/bin/
 backend/main
 backend/*.exe
+backend/tmp/
+backend/build-errors.log
 
 # Frontend specific - handled by frontend/.gitignore

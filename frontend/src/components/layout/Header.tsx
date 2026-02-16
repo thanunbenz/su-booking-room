@@ -89,7 +89,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
                 {user.fullname}
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                {getRoleDisplayName(user.role.name)}
+                {getRoleDisplayName(user.role.role_name)}
               </p>
             </div>
 

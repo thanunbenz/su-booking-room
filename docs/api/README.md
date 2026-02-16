@@ -7,21 +7,27 @@
 ## 📁 ไฟล์ในโฟลเดอร์นี้
 
 ### 1. **TESTING_WORKFLOW.md** 🔄
+
 คู่มือเลือกวิธีทดสอบที่เหมาะสมกับสถานการณ์:
+
 - เลือก testing method ตามสถานการณ์ (Development, Debug, CI/CD)
 - Recommended workflow แต่ละ phase
 - Decision tree และ testing checklist
 - Best practices
 
 ### 2. **API_TESTING_QUICKREF.md** ⚡
+
 คู่มือฉบับย่อสำหรับเริ่มต้นทดสอบอย่างรวดเร็ว:
+
 - เลือกวิธีทดสอบที่เหมาะสม (Postman / Bash / curl)
 - Endpoint reference ฉบับย่อ
 - Common errors และวิธีแก้
 - Default users และ validation rules
 
 ### 3. **BOOKING_API_TEST.md** 📖
+
 คู่มือการทดสอบ Booking API อย่างละเอียด ประกอบด้วย:
+
 - วิธี Setup Postman Environment
 - ตัวอย่าง API Requests ทั้งหมดพร้อม Request/Response
 - Test Scenarios (Happy Path, Error Cases, Validation Tests)
@@ -29,7 +35,9 @@
 - ตัวอย่าง curl commands
 
 ### 4. **test_booking_api.sh** 🤖
+
 Bash script สำหรับทดสอบอัตโนมัติ:
+
 - รันทดสอบ 16 scenarios พร้อมกัน
 - Color-coded output (✅ สีเขียว = ผ่าน, ❌ สีแดง = ไม่ผ่าน)
 - Auto login และเก็บ token
@@ -37,7 +45,9 @@ Bash script สำหรับทดสอบอัตโนมัติ:
 - ต้องติดตั้ง `jq` (JSON formatter)
 
 ### 5. **SU_Booking_Room_Postman_Collection.json** 📦
+
 Postman Collection ที่พร้อมใช้งาน ประกอบด้วย:
+
 - Authentication endpoints (Login Admin/User)
 - Booking endpoints สำหรับ User
 - Booking endpoints สำหรับ Admin
@@ -46,7 +56,9 @@ Postman Collection ที่พร้อมใช้งาน ประกอบ
 - Test scripts สำหรับ auto-save token
 
 ### 6. **SU_Booking_Room_Postman_Environment.json** 🔧
+
 Postman Environment Variables สำหรับ Local development:
+
 - `base_url`: http://localhost:8000
 - `api_version`: /api/v1
 - `admin_email`: admin@su.ac.th
@@ -80,6 +92,7 @@ chmod +x test_booking_api.sh
 ```
 
 **ผลลัพธ์:**
+
 - ✅ ทดสอบ 16 scenarios อัตโนมัติ
 - 🎨 Color-coded output (เขียว = ผ่าน, แดง = ไม่ผ่าน)
 - 🔍 ตรวจสอบ validation, permission, error handling
@@ -115,6 +128,7 @@ chmod +x test_booking_api.sh
 ### วิธีที่ 2: ใช้ curl (Command Line)
 
 #### 1. Login
+
 ```bash
 curl -X POST http://localhost:8000/api/v1/auth/login \
   -H "Content-Type: application/json" \
@@ -127,6 +141,7 @@ curl -X POST http://localhost:8000/api/v1/auth/login \
 #### 2. Copy Access Token จาก response
 
 #### 3. Create Booking
+
 ```bash
 curl -X POST http://localhost:8000/api/v1/bookings \
   -H "Authorization: Bearer YOUR_TOKEN_HERE" \
@@ -147,26 +162,31 @@ curl -X POST http://localhost:8000/api/v1/bookings \
 ### Basic Flow (Happy Path)
 
 1. **Login as User**
+
    ```
    POST /auth/login
    ```
 
 2. **Check Room Availability**
+
    ```
    GET /rooms/1/availability?date=2026-01-28
    ```
 
 3. **Create Booking**
+
    ```
    POST /bookings
    ```
 
 4. **View My Bookings**
+
    ```
    GET /bookings/my
    ```
 
 5. **Login as Admin**
+
    ```
    POST /auth/login (with admin credentials)
    ```
@@ -181,30 +201,37 @@ curl -X POST http://localhost:8000/api/v1/bookings \
 ### Error Scenarios
 
 #### 1. Time Conflict
+
 สร้างการจอง 2 รายการที่เวลาซ้อนทับกัน
+
 ```
 POST /bookings (09:00-11:00)
 POST /bookings (10:00-12:00) → ❌ Should fail with CONFLICT
 ```
 
 #### 2. Fixed Schedule Conflict
-จองในเวลาที่มีตารางเรียนประจำ
+
+จองในเวลาที่มีตารางการจอง
+
 ```
 GET /rooms/1/schedules → Check schedules
 POST /bookings (during class time) → ❌ Should fail with CONFLICT
 ```
 
 #### 3. Invalid Time Range
+
 ```
 POST /bookings (start_time: 17:00, end_time: 15:00) → ❌ Should fail
 ```
 
 #### 4. Booking in the Past
+
 ```
 POST /bookings (date: 2024-01-01) → ❌ Should fail
 ```
 
 #### 5. Permission Test
+
 ```
 GET /bookings (with user token, not admin) → ❌ Should fail with FORBIDDEN
 ```
@@ -214,44 +241,49 @@ GET /bookings (with user token, not admin) → ❌ Should fail with FORBIDDEN
 ## 📊 API Endpoints Summary
 
 ### Authentication
+
 - `POST /auth/login` - Login
 - `GET /auth/me` - Get current user
 
 ### Bookings (User)
+
 - `GET /bookings/my` - Get my bookings
 - `POST /bookings` - Create booking
 - `GET /bookings/:id` - Get booking by ID
 - `DELETE /bookings/:id/cancel` - Cancel own booking
 
 ### Bookings (Admin)
+
 - `GET /bookings` - Get all bookings (with filters)
 - `PATCH /bookings/:id/status` - Update booking status
 - `DELETE /bookings/:id` - Delete booking
 
 ### Room Availability
+
 - `GET /rooms/:id/availability` - Get room availability (Public)
 
 ---
 
 ## 🔑 Environment Variables
 
-| Variable | Description | Default Value |
-|----------|-------------|---------------|
-| `base_url` | Backend URL | http://localhost:8000 |
-| `api_version` | API version prefix | /api/v1 |
-| `admin_email` | Admin email for login | admin@su.ac.th |
-| `admin_password` | Admin password | admin123 |
-| `user_email` | Regular user email | user@su.ac.th |
-| `user_password` | Regular user password | user123 |
-| `access_token` | JWT access token (auto-filled) | - |
-| `user_access_token` | User's access token (auto-filled) | - |
-| `last_booking_id` | Last created booking ID (auto-filled) | - |
+| Variable            | Description                           | Default Value         |
+| ------------------- | ------------------------------------- | --------------------- |
+| `base_url`          | Backend URL                           | http://localhost:8000 |
+| `api_version`       | API version prefix                    | /api/v1               |
+| `admin_email`       | Admin email for login                 | admin@su.ac.th        |
+| `admin_password`    | Admin password                        | admin123              |
+| `user_email`        | Regular user email                    | user@su.ac.th         |
+| `user_password`     | Regular user password                 | user123               |
+| `access_token`      | JWT access token (auto-filled)        | -                     |
+| `user_access_token` | User's access token (auto-filled)     | -                     |
+| `last_booking_id`   | Last created booking ID (auto-filled) | -                     |
 
 ---
 
 ## ✅ Testing Checklist
 
 ### Authentication Tests
+
 - [ ] Login as Admin (success)
 - [ ] Login as User (success)
 - [ ] Login with wrong password (fail)
@@ -259,6 +291,7 @@ GET /bookings (with user token, not admin) → ❌ Should fail with FORBIDDEN
 - [ ] Get current user with invalid token (fail)
 
 ### User Booking Tests
+
 - [ ] Create booking (success)
 - [ ] Create booking with time conflict (fail)
 - [ ] Create booking with fixed schedule conflict (fail)
@@ -269,6 +302,7 @@ GET /bookings (with user token, not admin) → ❌ Should fail with FORBIDDEN
 - [ ] Cancel own booking
 
 ### Admin Booking Tests
+
 - [ ] Get all bookings
 - [ ] Get bookings filtered by status
 - [ ] Get bookings filtered by room and date
@@ -277,11 +311,13 @@ GET /bookings (with user token, not admin) → ❌ Should fail with FORBIDDEN
 - [ ] Delete booking
 
 ### Permission Tests
+
 - [ ] User trying to access admin endpoints (fail)
 - [ ] User trying to view other user's booking (fail)
 - [ ] User trying to update booking status (fail)
 
 ### Room Availability Tests
+
 - [ ] Get room availability (no auth required)
 - [ ] Get room availability with date filter
 - [ ] Get room availability without date filter
@@ -291,18 +327,23 @@ GET /bookings (with user token, not admin) → ❌ Should fail with FORBIDDEN
 ## 🐛 Common Issues
 
 ### Issue 1: "Missing authorization header"
+
 **Solution:** Make sure you've logged in and the access_token is saved in environment variables
 
 ### Issue 2: "Invalid or expired token"
+
 **Solution:** Login again to get a new token (tokens expire after 24 hours)
 
 ### Issue 3: "Time slot is already booked"
+
 **Solution:** Check room availability first, choose a different time slot
 
 ### Issue 4: "Forbidden: Admin access required"
+
 **Solution:** Login with admin credentials for admin-only endpoints
 
 ### Issue 5: "Cannot book in the past"
+
 **Solution:** Use a future date (>= today)
 
 ---

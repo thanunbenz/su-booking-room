@@ -74,10 +74,10 @@ function ProfilePage() {
             </div>
             <h2 className="text-2xl font-bold text-white mb-2">{user.fullname}</h2>
             <span
-              className={`inline-flex items-center px-4 py-1.5 rounded-full text-sm font-medium border ${getRoleBadgeColor(user.role.name)}`}
+              className={`inline-flex items-center px-4 py-1.5 rounded-full text-sm font-medium border ${getRoleBadgeColor(user.role.role_name)}`}
             >
               <TbShield className="w-4 h-4 mr-1.5" />
-              {getRoleDisplayName(user.role.name)}
+              {getRoleDisplayName(user.role.role_name)}
             </span>
           </div>
 
@@ -108,7 +108,7 @@ function ProfilePage() {
                   รหัสผู้ใช้
                 </p>
                 <p className="text-base font-medium text-gray-900 dark:text-white">
-                  #{user.id}
+                  #{user.user_id}
                 </p>
               </div>
             </div>
