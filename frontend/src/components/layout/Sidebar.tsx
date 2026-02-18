@@ -1,6 +1,6 @@
 'use client';
 
-import { FaHome, FaBook, FaTimes, FaBuilding } from 'react-icons/fa';
+import { FaHome, FaBook, FaTimes, FaBuilding, FaUsers } from 'react-icons/fa';
 import { TbDoor, TbCalendar } from 'react-icons/tb';
 import { MdAdminPanelSettings } from 'react-icons/md';
 import Link from 'next/link';
@@ -14,6 +14,8 @@ interface SidebarProps {
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { user, isAuthenticated } = useAuth();
   const isAdmin = user?.role?.role_name === 'admin';
+  const isVisitor = user?.role?.role_name === 'visitor';
+  const canBook = isAuthenticated && !isVisitor; // Admin และ Teacher จองได้
 
   return (
     <aside
@@ -43,17 +45,20 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           <span>หน้าหลัก</span>
         </Link>
 
-        <Link
-          href="/booking"
-          className="flex items-center gap-3 px-4 py-3 text-white hover:bg-teal-600 dark:hover:bg-teal-700 rounded-lg transition-colors font-medium"
-          onClick={onClose}
-        >
-          <FaBook className="text-lg" />
-          <span>จองห้องเรียน</span>
-        </Link>
+        {/* Booking Menu - ซ่อนสำหรับ Visitor */}
+        {canBook && (
+          <Link
+            href="/booking"
+            className="flex items-center gap-3 px-4 py-3 text-white hover:bg-teal-600 dark:hover:bg-teal-700 rounded-lg transition-colors font-medium"
+            onClick={onClose}
+          >
+            <FaBook className="text-lg" />
+            <span>จองห้องเรียน</span>
+          </Link>
+        )}
 
-        {/* Authenticated User Menu Items */}
-        {isAuthenticated && (
+        {/* My Bookings - ซ่อนสำหรับ Visitor */}
+        {canBook && (
           <Link
             href="/my-bookings"
             className="flex items-center gap-3 px-4 py-3 text-white hover:bg-teal-600 dark:hover:bg-teal-700 rounded-lg transition-colors font-medium"
@@ -109,6 +114,15 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             >
               <FaBook className="text-lg" />
               <span>จัดการการจอง</span>
+            </Link>
+
+            <Link
+              href="/admin/users"
+              className="flex items-center gap-3 px-4 py-3 text-white hover:bg-teal-600 dark:hover:bg-teal-700 rounded-lg transition-colors font-medium"
+              onClick={onClose}
+            >
+              <FaUsers className="text-lg" />
+              <span>จัดการผู้ใช้งาน</span>
             </Link>
           </>
         )}

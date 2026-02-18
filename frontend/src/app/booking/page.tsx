@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { withAuth } from '@/lib/withAuth';
+import { withRole } from '@/lib/withRole';
 import MainLayout from '@/components/layout/MainLayout';
 import { bookingApi, buildingApi, roomApi, scheduleApi } from '@/lib/api/client';
 import { Building, Room, Booking, FixedSchedule } from '@/lib/api/types';
@@ -520,4 +520,4 @@ function BookingPage() {
   );
 }
 
-export default withAuth(BookingPage);
+export default withRole(BookingPage, ['admin', 'teacher']);
