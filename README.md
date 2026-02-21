@@ -1,94 +1,21 @@
 # SU Booking Room
 
-ระบบจองห้อง/ห้องประชุม สำหรับภาควิชาคอมพิวเตอร์ มหาวิทยาลัยศิลปากร
+ระบบจองห้องเรียน/ห้องประชุม สำหรับภาควิชาคอมพิวเตอร์ มหาวิทยาลัยศิลปากร
 
-## 📚 เอกสาร
+---
 
-### 📖 Guides
+## Tech Stack
 
-- 🚀 **[Quick Start Guide](docs/guides/QUICK_START.md)** - เริ่มต้นใช้งานภายใน 5 นาที
-- 📘 **[Makefile Guide](docs/guides/MAKEFILE_GUIDE.md)** - คู่มือการใช้งาน Make commands ทั้งหมด
-- 📋 **[Makefile Cheatsheet](docs/guides/MAKEFILE_CHEATSHEET.md)** - คำสั่ง Make ฉบับย่อ
+| ส่วน | เทคโนโลยี |
+|------|-----------|
+| Frontend | Next.js 16, React 19, TypeScript, Tailwind CSS 4 |
+| Backend | Go 1.25+, Fiber v2, GORM v1.31 |
+| Database | PostgreSQL 16 (Alpine) |
+| DevOps | Docker, Docker Compose, Makefile |
 
-### 🧪 API Testing
+---
 
-- 📝 **[Booking API Test Guide](docs/api/BOOKING_API_TEST.md)** - คู่มือทดสอบ Booking API ด้วย Postman
-- 📦 **[Postman Collection](docs/api/SU_Booking_Room_Postman_Collection.json)** - Import เข้า Postman ได้เลย
-- 🔧 **[Test Script](docs/api/test_booking_api.sh)** - Bash script ทดสอบอัตโนมัติ
-
-### 🏗️ Architecture & Planning
-
-- 🏛️ **[Architecture](docs/architecture/ARCHITECTURE.md)** - สถาปัตยกรรมระบบ
-- 📝 **[Backend Plan](docs/planning/BACKEND_PLAN.md)** - แผนการพัฒนา Backend
-
-## 🏗️ Tech Stack
-
-- **Frontend**: Next.js 16, React 19, TailwindCSS, TypeScript
-- **Backend**: Go 1.25, Fiber v2, GORM
-- **Database**: PostgreSQL 16
-- **DevOps**: Docker, Docker Compose
-
-## 👥 User Roles & Permissions
-
-### 🔧 แอดมิน (Admin)
-
-- **จัดการข้อมูลพื้นฐาน**
-  - สร้าง/ลบ/แก้ไข ข้อมูลตึกเรียน
-  - สร้าง/ลบ/แก้ไข ข้อมูลห้องเรียน
-  - จัดการตารางการจอง (ใส่มือ ไม่มีดึงจาก reg)
-
-- **การจองและจัดการ**
-  - จองห้องแทนอาจารย์หรือบุคคลภายนอก
-  - จองให้ภาควิชาอื่นได้ (แทนที่ภาคอื่นจะใช้ระบบเอง)
-  - ยกเลิกการจองได้ พร้อมระบบแจ้งเตือนผู้จอง
-  - รองรับการจองหลายวัน (ทั้งแบบติดกัน และไม่ติดกัน)
-  - รองรับการขออุปกรณ์เสริม (โน้ตบุ๊ก ฯลฯ) โดยมีช่อง "อื่น ๆ"
-
-- **การดูข้อมูลและรายงาน**
-  - ดูสถานะการจองย้อนหลังและอนาคตทั้งหมด
-  - ดูตารางการใช้ห้อง
-  - เลือกได้ว่าจะปริ้นหรือไม่ปริ้นใบจอง
-
-### 👨‍🏫 อาจารย์ (Teacher)
-
-- **การจองห้อง**
-  - จองห้องได้ โดยระบบป้องกันการจองซ้ำกับคนอื่น
-  - เลือกวันเดียวหรือจองหลายวันได้
-  - ระบุอุปกรณ์ที่ต้องการ
-
-- **การดูข้อมูล**
-  - ดูตารางห้องที่ตัวเองจอง
-  - ดูตารางการใช้ห้อง
-
-### 👀 ผู้เยี่ยมชม (Visitor)
-
-- ดูตารางการใช้ห้อง (read-only)
-
-## 📋 Features
-
-### ✅ ระบบจัดการข้อมูลพื้นฐาน
-
-- จัดการอาคาร (Buildings)
-- จัดการห้อง (Rooms)
-- จัดการตารางการจอง (Fixed Schedule)
-
-### ✅ ระบบจองห้อง
-
-- จองวันเดียวหรือหลายวัน (ทั้งแบบติดกัน และไม่ติดกัน)
-- ป้องกันการจองซ้ำ
-- ระบุอุปกรณ์เสริม (โน้ตบุ๊ก ฯลฯ) พร้อมช่อง "อื่น ๆ"
-- ปริ้นใบจอง (Optional)
-
-### ✅ ระบบแจ้งเตือน
-
-- แจ้งเตือนเมื่อมีการยกเลิกการจอง
-
-### ✅ ระบบจัดการผู้ใช้
-
-- บทบาทผู้ใช้ 3 ระดับ (Admin, Teacher, Visitor)
-- ระบบสิทธิ์การใช้งานตามบทบาท
-
-## 🚀 Quick Start
+## Quick Start
 
 ### ด้วย Docker (แนะนำ)
 
@@ -97,237 +24,176 @@
 git clone <repository-url>
 cd su-booking-room
 
-# 2. Start all services
+# 2. สร้าง .env จาก template
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env.local
+
+# 3. Start database
 make up
 
-# 3. ตรวจสอบสถานะ
-make status
+# 4. รัน backend + frontend พร้อมกัน
+make dev
 ```
 
 **URLs:**
-
 - Frontend: http://localhost:3000
-- Backend API: http://localhost:8000
+- Backend API: http://localhost:8000/api/v1
 - Database: localhost:5432
 
-### การพัฒนาแบบ Local
+### บัญชีทดสอบ
 
-```bash
-# Install dependencies
-make install
+| Email | Role | Password |
+|-------|------|----------|
+| admin@silpakorn.edu | Admin | password123 |
+| teacher1@silpakorn.edu | Teacher | password123 |
+| visitor@silpakorn.edu | Visitor | password123 |
 
-# Run backend
-make dev-backend
+รัน seed data: `POST http://localhost:8000/api/v1/seed/all` (ต้อง login ด้วย admin ก่อน)
 
-# Run frontend (terminal ใหม่)
-make dev-frontend
-```
+---
 
-## 📦 Available Make Commands
+## Make Commands
 
 ```bash
 make help              # แสดงคำสั่งทั้งหมด
 
-# Docker Commands
-make up                # Start all services
-make down              # Stop all services
+# Development
+make up                # Start database (Docker)
+make dev               # รัน backend + frontend พร้อมกัน
+make dev-backend       # รัน backend อย่างเดียว (port 8000)
+make dev-frontend      # รัน frontend อย่างเดียว (port 3000)
+
+# Docker
 make build             # Build Docker images
-make rebuild           # Rebuild และ restart
-make restart           # Restart services
-make logs              # Show all logs
-make logs-backend      # Show backend logs
-make logs-frontend     # Show frontend logs
-make logs-db           # Show database logs
+make rebuild           # Rebuild & restart
+make down              # Stop services
+make logs              # Show logs
+make status            # Check service status
 
-# Development Commands
-make dev-backend       # Run backend locally
-make dev-frontend      # Run frontend locally
-
-# Database Commands
-make db-shell          # เข้า PostgreSQL shell
-make db-reset          # Reset database (ลบข้อมูลทั้งหมด!)
-
-# Build Commands
-make build-backend     # Build backend binary
-make build-frontend    # Build frontend
-
-# Testing
-make test-backend      # Run backend tests
-
-# Others
-make status            # แสดงสถานะ services
-make clean             # ลบ Docker resources
-make install           # Install dependencies
+# Database
+make db-shell          # เปิด PostgreSQL shell
+make db-reset          # รีเซ็ต database
 ```
 
-## 🗄️ Database Schema
+---
 
-### Tables
-
-- **roles** - บทบาทผู้ใช้ (admin, teacher, visitor)
-- **users** - ข้อมูลผู้ใช้
-- **buildings** - อาคาร
-- **rooms** - ห้อง
-- **bookings** - การจองห้อง
-- **fixed_schedules** - ตารางการจอง
-- **notifications** - การแจ้งเตือน
-
-## 📁 Project Structure
+## Project Structure
 
 ```
 su-booking-room/
 ├── backend/
 │   ├── internal/
-│   │   ├── config/          # Database config
-│   │   ├── handlers/        # HTTP handlers (แบบง่าย - MVC style)
-│   │   │   ├── auth_handler.go
-│   │   │   ├── building_handler.go
-│   │   │   ├── room_handler.go
-│   │   │   └── health_handler.go
-│   │   ├── models/          # Database models (GORM)
-│   │   ├── routes/          # API routes
-│   │   ├── middleware/      # Auth & Role middlewares
-│   │   ├── utils/           # JWT, Password, Validator, Response
-│   │   └── seed/            # Database seeder
-│   ├── Dockerfile
-│   └── main.go
+│   │   ├── config/        # Database config
+│   │   ├── handlers/      # HTTP handlers (MVC controllers)
+│   │   ├── models/        # GORM models
+│   │   ├── routes/        # Route definitions
+│   │   ├── middleware/    # JWT auth, RBAC, logging
+│   │   ├── utils/         # JWT, password, validator, response helpers
+│   │   └── seed/          # Database seeder
+│   ├── migrations/        # SQL migration files
+│   ├── main.go
+│   └── Dockerfile
+│
 ├── frontend/
 │   ├── src/
-│   │   ├── app/            # Next.js app directory
-│   │   └── components/     # React components
-│   ├── Dockerfile
-│   └── package.json
-├── docs/                    # Documentation
-│   ├── guides/
-│   ├── planning/
-│   └── architecture/
+│   │   ├── app/           # Next.js App Router pages
+│   │   │   ├── admin/     # Admin pages (buildings, rooms, users, bookings, schedules)
+│   │   │   ├── booking/   # Booking flow
+│   │   │   ├── room/      # Room detail
+│   │   │   ├── building/  # Building detail
+│   │   │   ├── my-bookings/
+│   │   │   ├── profile/
+│   │   │   ├── login/
+│   │   │   └── signup/
+│   │   ├── components/    # Reusable UI components
+│   │   ├── contexts/      # AuthContext, ThemeContext
+│   │   └── lib/           # API client, withAuth HOC, withRole HOC
+│   ├── package.json
+│   └── Dockerfile
+│
+├── docs/                  # Documentation (แบ่งหมวดหมู่)
+│   ├── guides/            # คู่มือการใช้งาน
+│   ├── api/               # เอกสาร API และการทดสอบ
+│   ├── database/          # SQL queries, seed data
+│   ├── docker/            # Docker guides
+│   ├── architecture/      # สถาปัตยกรรมระบบ
+│   └── planning/          # แผนการพัฒนา, สถานะโครงการ
+│
 ├── docker-compose.yml
 ├── Makefile
-└── README.md
+└── CLAUDE.md              # คำแนะนำสำหรับ Claude Code
 ```
 
-## 🔧 Environment Variables
+---
 
-สร้างไฟล์ `.env` จาก `.env.example`:
+## API Endpoints
 
-```bash
-cp .env.example .env
+Base URL: `http://localhost:8000/api/v1`
+
+| กลุ่ม | Endpoint | Method | Auth |
+|-------|----------|--------|------|
+| Auth | `/auth/login` | POST | Public |
+| Auth | `/auth/register` | POST | Public |
+| Auth | `/auth/me` | GET | JWT |
+| Buildings | `/buildings` | GET | Public |
+| Buildings | `/buildings` | POST/PUT/DELETE | Admin |
+| Rooms | `/rooms` | GET | Public |
+| Rooms | `/rooms/:id/availability` | GET | Public |
+| Rooms | `/rooms` | POST/PUT/DELETE | Admin |
+| Bookings | `/bookings/my` | GET | JWT |
+| Bookings | `/bookings` | POST | JWT |
+| Bookings | `/bookings` | GET | Admin |
+| Bookings | `/bookings/:id/status` | PATCH | Admin |
+| Users | `/users` | GET/POST/PUT/DELETE | Admin |
+| Roles | `/roles` | GET | JWT |
+| Schedules | `/schedules` | GET/POST/PUT/DELETE | Admin |
+| Seed | `/seed/all` | POST | Admin |
+| Seed | `/seed/clear` | DELETE | Admin |
+| Health | `/health` | GET | Public |
+
+---
+
+## Roles & Permissions
+
+| Role | สิทธิ์ |
+|------|-------|
+| Admin | เข้าถึงทุกอย่าง + จัดการ users, buildings, rooms, schedules, อนุมัติ/ปฏิเสธการจอง |
+| Teacher | จองห้อง, ดูการจองของตัวเอง, ยกเลิกการจองของตัวเอง |
+| Visitor | ดูตารางการใช้ห้องอย่างเดียว (read-only) |
+
+---
+
+## Environment Variables
+
+### Backend (`backend/.env`)
+
+```env
+SERVER_PORT=8000
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=password
+DB_NAME=su_booking_room
+JWT_SECRET=your-secret-key
+CORS_ORIGINS=http://localhost:3000
 ```
 
-แก้ไขค่าตามต้องการ:
+### Frontend (`frontend/.env.local`)
 
-- `DB_HOST` - Database host (default: localhost)
-- `DB_PORT` - Database port (default: 5432)
-- `DB_USER` - Database user
-- `DB_PASSWORD` - Database password
-- `DB_NAME` - Database name
-- `NEXT_PUBLIC_API_URL` - Backend API URL
-
-## 🛠️ Development
-
-### Backend (Go)
-
-```bash
-cd backend
-
-# Install dependencies
-go mod download
-
-# Run
-go run main.go
-
-# Build
-go build -o bin/server main.go
-
-# Test
-go test -v ./...
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
 ```
 
-### Frontend (Next.js)
+---
 
-```bash
-cd frontend
+## Documentation
 
-# Install dependencies
-npm install
+ดูเอกสารทั้งหมดได้ที่ [docs/README.md](docs/README.md)
 
-# Run development server
-npm run dev
+### ลิงก์ที่ใช้บ่อย
 
-# Build
-npm run build
-
-# Start production
-npm start
-```
-
-## 📝 API Documentation
-
-Backend API รันที่ `http://localhost:8000`
-
-### ทดสอบ API ด้วย Postman
-
-```bash
-# Import ไฟล์เหล่านี้เข้า Postman
-1. docs/api/SU_Booking_Room_Postman_Collection.json  # Collection
-2. docs/api/SU_Booking_Room_Postman_Environment.json  # Environment
-
-# หรือใช้ Bash script ทดสอบอัตโนมัติ
-chmod +x docs/api/test_booking_api.sh
-./docs/api/test_booking_api.sh
-```
-
-### Main Endpoints
-
-**Authentication**
-
-- `POST /api/v1/auth/login` - Login
-- `POST /api/v1/auth/register` - Register
-- `GET /api/v1/auth/me` - Get current user
-
-**Buildings**
-
-- `GET /api/v1/buildings` - Get all buildings
-- `GET /api/v1/buildings/:id` - Get building by ID
-- `POST /api/v1/buildings` - Create building (Admin only)
-- `PUT /api/v1/buildings/:id` - Update building (Admin only)
-- `DELETE /api/v1/buildings/:id` - Delete building (Admin only)
-
-**Rooms**
-
-- `GET /api/v1/rooms` - Get all rooms
-- `GET /api/v1/rooms/:id` - Get room by ID
-- `GET /api/v1/rooms/:id/availability` - Get room availability
-- `POST /api/v1/rooms` - Create room (Admin only)
-
-**Bookings**
-
-- `GET /api/v1/bookings/my` - Get my bookings
-- `GET /api/v1/bookings` - Get all bookings (Admin only)
-- `POST /api/v1/bookings` - Create booking
-- `PATCH /api/v1/bookings/:id/status` - Update booking status (Admin only)
-- `DELETE /api/v1/bookings/:id/cancel` - Cancel booking
-
-📖 **รายละเอียดเพิ่มเติม:** [Booking API Test Guide](docs/api/BOOKING_API_TEST.md)
-
-## 🤝 Contributing
-
-1. Fork the project
-2. Create feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to branch (`git push origin feature/AmazingFeature`)
-5. Open Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License.
-
-## 👨‍💻 Authors
-
-- **Sumbenz** - _Initial work_
-
-## 🙏 Acknowledgments
-
-- Silpakorn University
-- Go Fiber Framework
-- Next.js Team
+- [Quick Start Guide](docs/guides/QUICK_START.md) — เริ่มต้นใช้งานใน 5 นาที
+- [Architecture](docs/architecture/ARCHITECTURE.md) — สถาปัตยกรรมระบบ
+- [API Testing Quick Reference](docs/api/API_TESTING_QUICKREF.md) — ทดสอบ API ฉบับย่อ
+- [Seed API Guide](docs/api/SEED_API_GUIDE.md) — สร้าง mock data
+- [Project Status](docs/planning/PROJECT_STATUS.md) — สถานะโครงการและ TODO

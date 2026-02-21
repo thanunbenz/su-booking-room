@@ -363,6 +363,7 @@ GET /bookings (with user token, not admin) → ❌ Should fail with FORBIDDEN
 - 🔄 **[Testing Workflow](TESTING_WORKFLOW.md)** - คู่มือเลือกวิธีทดสอบที่เหมาะสม
 - ⚡ **[API Testing Quick Reference](API_TESTING_QUICKREF.md)** - คู่มือฉบับย่อ (เริ่มที่นี่!)
 - 📖 **[BOOKING_API_TEST.md](BOOKING_API_TEST.md)** - คู่มือการทดสอบโดยละเอียด
+- 🌱 **[SEED_API_GUIDE.md](SEED_API_GUIDE.md)** - คู่มือใช้งาน Seed API
 - 🖥️ **[Backend README](../../backend/README.md)** - เอกสาร Backend API
 - 🚀 **[Quick Start Guide](../guides/QUICK_START.md)** - เริ่มต้นใช้งานระบบ
 - 📚 **[Documentation Index](../README.md)** - เอกสารทั้งหมด

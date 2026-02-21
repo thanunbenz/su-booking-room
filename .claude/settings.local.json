@@ -41,7 +41,8 @@
       "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NzEyNDQ4NTcsImZ1bGxfbmFtZSI6IkFkbWluIFNpbHBha29ybiIsInJvbGVfaWQiOjEsInRva2VuX3R5cGUiOiJhY2Nlc3MiLCJ1c2VyX2lkIjoxfQ.owjy23WoDvN2_XibPP-OdHxaWg7hZwzgt1lQOlhrJmM\")",
       "Bash(/Users/sumbenz/workspace/su-booking-room/backend)",
       "Bash(/Users/sumbenz/go/bin/air:*)",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "Bash(git ls-tree:*)"
     ],
     "deny": [],
     "ask": []
