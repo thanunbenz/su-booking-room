@@ -125,6 +125,27 @@ status: ## Show status of all services
 
 ps: status ## Alias for status
 
+ports: ## Check which ports frontend/backend are running on
+	@echo "$(BLUE)Checking ports for frontend and backend...$(NC)"
+	@echo ""
+	@echo "$(YELLOW)Backend (Port 8000):$(NC)"
+	@lsof -i :8000 -sTCP:LISTEN || echo "  $(RED)✗ No process running on port 8000$(NC)"
+	@echo ""
+	@echo "$(YELLOW)Frontend (Port 3000):$(NC)"
+	@lsof -i :3000 -sTCP:LISTEN || echo "  $(RED)✗ No process running on port 3000$(NC)"
+	@echo ""
+
+kill-all: ## Kill all frontend and backend processes
+	@echo "$(BLUE)Stopping all frontend and backend processes...$(NC)"
+	@echo ""
+	@echo "$(YELLOW)Killing processes on port 8000 (backend)...$(NC)"
+	@lsof -ti :8000 | xargs kill -9 2>/dev/null && echo "  $(GREEN)✓ Backend stopped$(NC)" || echo "  $(YELLOW)No backend process found$(NC)"
+	@echo ""
+	@echo "$(YELLOW)Killing processes on port 3000 (frontend)...$(NC)"
+	@lsof -ti :3000 | xargs kill -9 2>/dev/null && echo "  $(GREEN)✓ Frontend stopped$(NC)" || echo "  $(YELLOW)No frontend process found$(NC)"
+	@echo ""
+	@echo "$(GREEN)✓ All local dev processes stopped!$(NC)"
+
 # Installation Commands
 install-backend: ## Install backend dependencies
 	@echo "$(BLUE)Installing backend dependencies...$(NC)"
