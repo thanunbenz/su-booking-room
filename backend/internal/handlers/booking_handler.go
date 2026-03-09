@@ -13,11 +13,23 @@ import (
 
 // BookingHandler - Handler สำหรับจัดการการจองห้อง
 type BookingHandler struct {
-	DB *gorm.DB
+	DB           *gorm.DB
+	NotifService NotificationService
 }
 
-func NewBookingHandler(db *gorm.DB) *BookingHandler {
-	return &BookingHandler{DB: db}
+// NotificationService - interface สำหรับ notification service
+type NotificationService interface {
+	NotifyBookingCreated(bookingID int) error
+	NotifyBookingApproved(bookingID int) error
+	NotifyBookingRejected(bookingID int, reason string) error
+	NotifyBookingCancelled(bookingID int, reason string) error
+}
+
+func NewBookingHandler(db *gorm.DB, notifService NotificationService) *BookingHandler {
+	return &BookingHandler{
+		DB:           db,
+		NotifService: notifService,
+	}
 }
 
 // GetAll - GET /bookings (Admin only - ดูการจองทั้งหมด)
@@ -210,6 +222,11 @@ func (h *BookingHandler) Create(c *fiber.Ctx) error {
 		return utils.InternalServerErrorResponse(c, err.Error())
 	}
 
+	// ส่ง notification (async - ไม่ block response)
+	if h.NotifService != nil {
+		go h.NotifService.NotifyBookingCreated(input.BookingID)
+	}
+
 	return utils.StandardResponse(c, fiber.StatusCreated, input, "Booking created successfully")
 }
 
@@ -256,6 +273,20 @@ func (h *BookingHandler) UpdateStatus(c *fiber.Ctx) error {
 		return utils.InternalServerErrorResponse(c, err.Error())
 	}
 
+	// ส่ง notification ตาม status (async)
+	if h.NotifService != nil {
+		go func() {
+			switch booking.Status {
+			case "approved":
+				h.NotifService.NotifyBookingApproved(booking.BookingID)
+			case "rejected":
+				h.NotifService.NotifyBookingRejected(booking.BookingID, booking.StatusNote)
+			case "cancelled":
+				h.NotifService.NotifyBookingCancelled(booking.BookingID, booking.StatusNote)
+			}
+		}()
+	}
+
 	return utils.StandardResponse(c, fiber.StatusOK, booking, "Booking status updated successfully")
 }
 
@@ -290,6 +321,11 @@ func (h *BookingHandler) Cancel(c *fiber.Ctx) error {
 
 	if err := h.DB.Save(&booking).Error; err != nil {
 		return utils.InternalServerErrorResponse(c, err.Error())
+	}
+
+	// ส่ง notification (async)
+	if h.NotifService != nil {
+		go h.NotifService.NotifyBookingCancelled(booking.BookingID, booking.StatusNote)
 	}
 
 	return utils.StandardResponse(c, fiber.StatusOK, booking, "Booking cancelled successfully")

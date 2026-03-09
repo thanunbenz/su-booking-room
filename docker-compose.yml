@@ -21,6 +21,18 @@ services:
     networks:
       - su-booking-network
 
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: su-booking-mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"  # SMTP server
+      - "8025:8025"  # Web UI
+    networks:
+      - su-booking-network
+    logging:
+      driver: "none"  # Disable logs
+
 networks:
   su-booking-network:
     driver: bridge

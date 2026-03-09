@@ -42,7 +42,14 @@
       "Bash(/Users/sumbenz/workspace/su-booking-room/backend)",
       "Bash(/Users/sumbenz/go/bin/air:*)",
       "Bash(xargs:*)",
-      "Bash(git ls-tree:*)"
+      "Bash(git ls-tree:*)",
+      "Bash(sed -i '' 's/booking\\\\.Room\\\\.RoomName/booking.Room.Name/g' internal/services/notification_service.go)",
+      "Bash(sed -i '' 's/booking\\\\.Room\\\\.Building\\\\.BuildingName/booking.Room.Building.Name/g' internal/services/notification_service.go)",
+      "Bash(sed -i '' 's/booking\\\\.User\\\\.First_name/booking.User.FirstName/g' internal/services/notification_service.go)",
+      "Bash(sed -i '' 's/booking\\\\.User\\\\.Last_name/booking.User.LastName/g' internal/services/notification_service.go)",
+      "Bash(docker-compose up -d mailhog)",
+      "Bash(timeout 5 ./bin/server)",
+      "Read(//private/tmp/**)"
     ],
     "deny": [],
     "ask": []

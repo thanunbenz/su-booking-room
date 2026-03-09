@@ -1,104 +1,70 @@
 # Documentation
 
-เอกสารประกอบสำหรับโปรเจค SU Booking Room
+Complete documentation for SU Booking Room system.
 
----
+## Quick Start
 
-## โครงสร้างเอกสาร
+1. [Installation](guides/QUICK_START.md) - 5-minute setup
+2. [Architecture](architecture/ARCHITECTURE.md) - System overview
+3. [Makefile Commands](guides/MAKEFILE_GUIDE.md) - Development commands
 
-```
-docs/
-├── README.md                  # ไฟล์นี้ — ภาพรวมเอกสารทั้งหมด
-│
-├── guides/                    # คู่มือการใช้งาน
-│   ├── QUICK_START.md                 — เริ่มต้นใช้งานภายใน 5 นาที
-│   ├── BACKEND_QUICKSTART.md          — เริ่มต้นพัฒนา Backend
-│   ├── FRONTEND_QUICKSTART.md         — เริ่มต้นพัฒนา Frontend
-│   ├── ROLE_MIDDLEWARE_GUIDE.md       — คู่มือใช้งาน Role Middleware
-│   ├── CREATE_NEW_PROJECT.md          — คู่มือสร้างโปรเจคใหม่
-│   ├── MAKEFILE_GUIDE.md              — คู่มือการใช้งาน Make commands
-│   └── MAKEFILE_CHEATSHEET.md         — คำสั่ง Make ฉบับย่อ
-│
-├── api/                       # เอกสาร API และการทดสอบ
-│   ├── README.md                              — ภาพรวมและ Quick Start
-│   ├── TESTING_WORKFLOW.md                    — คู่มือเลือกวิธีทดสอบที่เหมาะสม
-│   ├── API_TESTING_QUICKREF.md                — คู่มือทดสอบ API ฉบับย่อ
-│   ├── API_TESTING.md                         — วิธีการทดสอบ API ทั่วไป
-│   ├── BOOKING_API_TEST.md                    — คู่มือทดสอบ Booking API (Postman)
-│   ├── FRONTEND_API_GUIDE.md                  — คู่มือใช้งาน API ฝั่ง Frontend
-│   ├── SEED_API_GUIDE.md                      — คู่มือใช้งาน Seed API (สร้าง mock data)
-│   ├── POSTMAN_EXAMPLES.md                    — ตัวอย่าง Postman requests
-│   ├── SU_Booking_Room_Postman_Collection.json — Postman Collection (import ได้เลย)
-│   ├── SU_Booking_Room_Postman_Environment.json — Postman Environment
-│   └── test_booking_api.sh                    — Bash script ทดสอบอัตโนมัติ
-│
-├── database/                  # เอกสารฐานข้อมูล
-│   ├── SQL_QUERIES.md                 — คำสั่ง SQL ที่ใช้บ่อย
-│   ├── BOOKING_SEED_DATA.md           — SQL สำหรับสร้างข้อมูล Seed
-│   └── MIGRATION_FIX.md               — แก้ไขปัญหา Migration
-│
-├── docker/                    # เอกสาร Docker
-│   └── DOCKER_RESTART.md              — วิธีการ restart Docker services
-│
-├── architecture/              # สถาปัตยกรรมระบบ
-│   ├── ARCHITECTURE.md                — สถาปัตยกรรมและโครงสร้างโปรเจค
-│   ├── ARCHITECTURE_SIMPLE.md         — สถาปัตยกรรมแบบเข้าใจง่าย
-│   └── REFACTOR_COMPARISON.md         — เปรียบเทียบก่อนและหลัง refactor
-│
-└── planning/                  # แผนการพัฒนา
-    ├── BACKEND_PLAN.md                — แผนการพัฒนา Backend (8 Phases)
-    └── PROJECT_STATUS.md              — สถานะโครงการและ TODO list
-```
+## Categories
 
----
+### Guides
+- [Quick Start](guides/QUICK_START.md) - 5-minute setup
+- [Backend Quickstart](guides/BACKEND_QUICKSTART.md) - Backend development
+- [Frontend Quickstart](guides/FRONTEND_QUICKSTART.md) - Frontend development
+- [Makefile Guide](guides/MAKEFILE_GUIDE.md) - Make commands
+- [Makefile Cheatsheet](guides/MAKEFILE_CHEATSHEET.md) - Quick reference
+- [Role Middleware](guides/ROLE_MIDDLEWARE_GUIDE.md) - RBAC guide
 
-## เริ่มต้นใช้งาน
+### Setup & Configuration
+- [MailHog Setup](setup/MAILHOG_GUIDE.md) - Email testing with MailHog
+- [SMTP Configuration](setup/SWITCH_SMTP.md) - Switch MailHog/Gmail
 
-สำหรับผู้ใช้งานครั้งแรก แนะนำให้อ่านตามลำดับ:
+### Features
+- [Notification System](features/notifications.md) - Email notifications
 
-1. **[Quick Start Guide](guides/QUICK_START.md)** — ติดตั้งและรันโปรเจคใน 5 นาที
-2. **[Architecture](architecture/ARCHITECTURE.md)** — ทำความเข้าใจโครงสร้างระบบ
-3. **[Makefile Guide](guides/MAKEFILE_GUIDE.md)** — คำสั่งที่ใช้บ่อยในการพัฒนา
-4. **[Docker Guide](docker/DOCKER_RESTART.md)** — จัดการ Docker services
+### API
+- [API Overview](api/README.md) - API documentation
+- [Testing Guide](api/API_TESTING_QUICKREF.md) - Quick testing reference
+- [Booking API](api/BOOKING_API_TEST.md) - Booking endpoints
+- [Frontend API](api/FRONTEND_API_GUIDE.md) - Frontend usage
+- [Seed API](api/SEED_API_GUIDE.md) - Test data generation
+- [Postman Collection](api/SU_Booking_Room_Postman_Collection.json) - Import ready
 
----
+### Database
+- [SQL Queries](database/SQL_QUERIES.md) - Common queries
+- [Seed Data](database/BOOKING_SEED_DATA.md) - Test data SQL
+- [Migration Fix](database/MIGRATION_FIX.md) - Troubleshooting
 
-## สำหรับนักพัฒนา
+### Architecture
+- [System Architecture](architecture/ARCHITECTURE.md) - Full architecture
+- [Architecture Simple](architecture/ARCHITECTURE_SIMPLE.md) - Simplified
+- [Refactor Comparison](architecture/REFACTOR_COMPARISON.md) - Before/after
 
-### Backend Developer
+### Security
+- [Security Guidelines](security/SECURITY_TODO.md) - Best practices
 
-1. **[Backend Quickstart](guides/BACKEND_QUICKSTART.md)** — เริ่มต้นพัฒนา Backend
-2. **[Architecture](architecture/ARCHITECTURE.md)** — สถาปัตยกรรมระบบทั้งหมด
-3. **[API Testing Quick Reference](api/API_TESTING_QUICKREF.md)** — คู่มือทดสอบ API ฉบับย่อ
-4. **[Booking API Test Guide](api/BOOKING_API_TEST.md)** — คู่มือทดสอบ Booking API แบบเต็ม
-5. **[Seed API Guide](api/SEED_API_GUIDE.md)** — คู่มือใช้งาน Seed API สร้าง mock data
-6. **[Database Queries](database/SQL_QUERIES.md)** — คำสั่ง SQL ที่ใช้บ่อย
-7. **[Booking Seed Data](database/BOOKING_SEED_DATA.md)** — SQL สำหรับสร้างข้อมูล seed
-8. **[Backend Plan](planning/BACKEND_PLAN.md)** — แผนการพัฒนา Backend
+### Infrastructure
+- [Docker Guide](docker/DOCKER_RESTART.md) - Container management
 
-### Frontend Developer
+### Planning
+- [Backend Plan](planning/BACKEND_PLAN.md) - Development roadmap
+- [Project Status](planning/PROJECT_STATUS.md) - Current status
 
-1. **[Frontend Quickstart](guides/FRONTEND_QUICKSTART.md)** — เริ่มต้นพัฒนา Frontend
-2. **[Frontend API Guide](api/FRONTEND_API_GUIDE.md)** — คู่มือใช้งาน API
-3. **[Architecture](architecture/ARCHITECTURE.md)** — ทำความเข้าใจโครงสร้างระบบ
+## For Developers
 
----
+**Backend**
+1. [Backend Quickstart](guides/BACKEND_QUICKSTART.md)
+2. [API Testing](api/API_TESTING_QUICKREF.md)
+3. [Database Guide](database/SQL_QUERIES.md)
 
-## หมวดหมู่เอกสาร
+**Frontend**
+1. [Frontend Quickstart](guides/FRONTEND_QUICKSTART.md)
+2. [API Guide](api/FRONTEND_API_GUIDE.md)
 
-| หมวดหมู่ | โฟลเดอร์ | เนื้อหา |
-|----------|----------|---------|
-| คู่มือการใช้งาน | `guides/` | Quick start, Quickstart สำหรับ Backend/Frontend, Makefile |
-| API | `api/` | การทดสอบ API, Postman Collection, Bash script |
-| ฐานข้อมูล | `database/` | SQL queries, Seed data, Migration fixes |
-| Docker | `docker/` | การจัดการ containers |
-| สถาปัตยกรรม | `architecture/` | โครงสร้างระบบ, design decisions |
-| แผนการพัฒนา | `planning/` | Roadmap, สถานะโครงการ, TODO list |
+## Related
 
----
-
-## เอกสารที่เกี่ยวข้อง
-
-- **[Root README](../README.md)** — ข้อมูลภาพรวมโปรเจค
-- **[CLAUDE.md](../CLAUDE.md)** — คำแนะนำสำหรับ Claude Code
-- **[Project Status](planning/PROJECT_STATUS.md)** — สถานะโครงการปัจจุบัน
+- [Main README](../README.md) - Project overview
+- [CLAUDE.md](../CLAUDE.md) - AI guidelines

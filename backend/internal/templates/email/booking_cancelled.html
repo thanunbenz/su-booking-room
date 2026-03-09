@@ -1,0 +1,52 @@
+{{template "base" .}}
+
+{{define "content"}}
+<h2>การจองของคุณถูกยกเลิก</h2>
+
+<p>สวัสดีคุณ <strong>{{.UserName}}</strong></p>
+<p>การจองห้องของคุณได้ถูกยกเลิกแล้ว</p>
+
+<div class="info-box">
+    <h3>รายละเอียดการจอง</h3>
+    <div class="detail-row">
+        <span class="detail-label">เลขที่การจอง</span>
+        <span class="detail-value">#{{.BookingID}}</span>
+    </div>
+    <div class="detail-row">
+        <span class="detail-label">ห้อง</span>
+        <span class="detail-value">{{.RoomName}} ({{.BuildingName}})</span>
+    </div>
+    <div class="detail-row">
+        <span class="detail-label">หัวข้อ</span>
+        <span class="detail-value">{{.Title}}</span>
+    </div>
+    <div class="detail-row">
+        <span class="detail-label">วันที่</span>
+        <span class="detail-value">{{.BookingDate}}</span>
+    </div>
+    <div class="detail-row">
+        <span class="detail-label">เวลา</span>
+        <span class="detail-value">{{.StartTime}} - {{.EndTime}}</span>
+    </div>
+    <div class="detail-row">
+        <span class="detail-label">สถานะ</span>
+        <span class="detail-value">
+            <span class="status-badge status-cancelled">ยกเลิกแล้ว</span>
+        </span>
+    </div>
+    {{if .StatusNote}}
+    <div class="detail-row">
+        <span class="detail-label">หมายเหตุ</span>
+        <span class="detail-value">{{.StatusNote}}</span>
+    </div>
+    {{end}}
+</div>
+
+<div class="note-box">
+    หากคุณยังต้องการใช้ห้องในวันเวลาดังกล่าว กรุณาทำการจองใหม่อีกครั้ง
+</div>
+
+<div style="text-align: center;">
+    <a href="{{.BookNewURL}}" class="button">จองห้องใหม่</a>
+</div>
+{{end}}

@@ -1,0 +1,59 @@
+{{template "base" .}}
+
+{{define "content"}}
+<h2>การจองของคุณได้รับการอนุมัติ</h2>
+
+<p>สวัสดีคุณ <strong>{{.UserName}}</strong></p>
+<p>การจองห้องของคุณได้รับการอนุมัติจากผู้ดูแลระบบแล้ว</p>
+
+<div class="info-box">
+    <h3>รายละเอียดการจอง</h3>
+    <div class="detail-row">
+        <span class="detail-label">เลขที่การจอง</span>
+        <span class="detail-value">#{{.BookingID}}</span>
+    </div>
+    <div class="detail-row">
+        <span class="detail-label">ห้อง</span>
+        <span class="detail-value">{{.RoomName}} ({{.BuildingName}})</span>
+    </div>
+    <div class="detail-row">
+        <span class="detail-label">หัวข้อ</span>
+        <span class="detail-value">{{.Title}}</span>
+    </div>
+    <div class="detail-row">
+        <span class="detail-label">วันที่</span>
+        <span class="detail-value">{{.BookingDate}}</span>
+    </div>
+    <div class="detail-row">
+        <span class="detail-label">เวลา</span>
+        <span class="detail-value">{{.StartTime}} - {{.EndTime}}</span>
+    </div>
+    <div class="detail-row">
+        <span class="detail-label">สถานะ</span>
+        <span class="detail-value">
+            <span class="status-badge status-approved">อนุมัติแล้ว</span>
+        </span>
+    </div>
+    {{if .StatusNote}}
+    <div class="detail-row">
+        <span class="detail-label">หมายเหตุ</span>
+        <span class="detail-value">{{.StatusNote}}</span>
+    </div>
+    {{end}}
+</div>
+
+<div class="note-box" style="background-color: #d1fae5; border-left-color: #059669; color: #065f46;">
+    คุณสามารถใช้ห้องตามวันเวลาที่กำหนดได้แล้ว กรุณามาถึงก่อนเวลา 5-10 นาที
+</div>
+
+<div style="text-align: center;">
+    <a href="{{.ViewBookingURL}}" class="button">ดูรายละเอียดการจอง</a>
+</div>
+
+<p style="margin-top: 24px; font-size: 13px; color: #6b7280;">
+    <strong>ข้อควรระวัง:</strong><br>
+    • กรุณาใช้ห้องตามวัตถุประสงค์ที่ระบุ<br>
+    • รักษาความสะอาดและอุปกรณ์ในห้อง<br>
+    • หากไม่สามารถใช้ห้องได้ กรุณายกเลิกการจองล่วงหน้า
+</p>
+{{end}}

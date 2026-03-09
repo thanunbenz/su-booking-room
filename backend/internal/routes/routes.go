@@ -4,10 +4,11 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/thanunbenz/su-booking-room/internal/handlers"
 	"github.com/thanunbenz/su-booking-room/internal/middleware"
+	"github.com/thanunbenz/su-booking-room/internal/services"
 	"gorm.io/gorm"
 )
 
-func SetupRoutes(app *fiber.App, db *gorm.DB) {
+func SetupRoutes(app *fiber.App, db *gorm.DB, notifService *services.NotificationService) {
 	// Initialize handlers with DB connection
 	authHandler := handlers.NewAuthHandler(db)
 	userHandler := handlers.NewUserHandler(db)
@@ -15,8 +16,9 @@ func SetupRoutes(app *fiber.App, db *gorm.DB) {
 	buildingHandler := handlers.NewBuildingHandler(db)
 	roomHandler := handlers.NewRoomHandler(db)
 	scheduleHandler := handlers.NewFixedScheduleHandler(db)
-	bookingHandler := handlers.NewBookingHandler(db)
+	bookingHandler := handlers.NewBookingHandler(db, notifService)
 	seedHandler := handlers.NewSeedHandler(db)
+	notificationHandler := handlers.NewNotificationHandler(notifService)
 
 	// API v1 group
 	api := app.Group("/api/v1")
@@ -69,7 +71,7 @@ func SetupRoutes(app *fiber.App, db *gorm.DB) {
 	bookings.Get("/:id", middleware.AuthMiddleware, bookingHandler.GetByID)                                     // User/Admin - ดูการจองตาม ID
 
 	// POST routes
-	bookings.Post("/", middleware.AuthMiddleware, bookingHandler.Create) // User - สร้างการจอง
+	bookings.Post("/", middleware.AuthMiddleware, middleware.BookingRateLimiter, bookingHandler.Create) // User - สร้างการจอง (with rate limiting)
 
 	// PATCH routes
 	bookings.Patch("/:id/status", middleware.AuthMiddleware, middleware.AdminOnly, bookingHandler.UpdateStatus) // Admin only - อนุมัติ/ปฏิเสธ
@@ -93,6 +95,13 @@ func SetupRoutes(app *fiber.App, db *gorm.DB) {
 	roles.Post("/", middleware.AuthMiddleware, middleware.AdminOnly, roleHandler.Create)    // Admin only - สร้าง role
 	roles.Put("/:id", middleware.AuthMiddleware, middleware.AdminOnly, roleHandler.Update)  // Admin only - แก้ไข role
 	roles.Delete("/:id", middleware.AuthMiddleware, middleware.AdminOnly, roleHandler.Delete) // Admin only - ลบ role
+
+	// Notification routes (protected)
+	notifications := api.Group("/notifications")
+	notifications.Get("/my", middleware.AuthMiddleware, notificationHandler.GetMyNotifications)           // ดู notifications ของตัวเอง
+	notifications.Patch("/read-all", middleware.AuthMiddleware, notificationHandler.MarkAllAsRead)        // ทำเครื่องหมายทั้งหมดว่าอ่านแล้ว
+	notifications.Patch("/:id/read", middleware.AuthMiddleware, notificationHandler.MarkAsRead)           // ทำเครื่องหมายว่าอ่านแล้ว
+	notifications.Delete("/:id", middleware.AuthMiddleware, notificationHandler.Delete)                   // ลบ notification
 
 	// Seed routes (Admin only - for development/testing)
 	seed := api.Group("/seed")
