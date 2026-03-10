@@ -76,7 +76,7 @@ func (s *NotificationService) NotifyBookingApproved(bookingID int) error {
 		return err
 	}
 
-	go s.sendBookingEmail(notificationID, booking, "booking_approved.html", "🎉 การจองได้รับการอนุมัติแล้ว")
+	go s.sendBookingEmail(notificationID, booking, "booking_approved.html", "การจองได้รับการอนุมัติแล้ว")
 
 	return nil
 }
@@ -101,7 +101,7 @@ func (s *NotificationService) NotifyBookingRejected(bookingID int, reason string
 		return err
 	}
 
-	go s.sendBookingEmail(notificationID, booking, "booking_rejected.html", "❌ การจองถูกปฏิเสธ")
+	go s.sendBookingEmail(notificationID, booking, "booking_rejected.html", "การจองถูกปฏิเสธ")
 
 	return nil
 }
@@ -126,7 +126,7 @@ func (s *NotificationService) NotifyBookingCancelled(bookingID int, reason strin
 		return err
 	}
 
-	go s.sendBookingEmail(notificationID, booking, "booking_cancelled.html", "🚫 การจองถูกยกเลิก")
+	go s.sendBookingEmail(notificationID, booking, "booking_cancelled.html", "การจองถูกยกเลิก")
 
 	return nil
 }
@@ -149,7 +149,7 @@ func (s *NotificationService) NotifyBookingReminder(bookingID int) error {
 		return err
 	}
 
-	go s.sendBookingEmail(notificationID, booking, "booking_reminder.html", "⏰ แจ้งเตือน: การจองของคุณใกล้ถึงกำหนด")
+	go s.sendBookingEmail(notificationID, booking, "booking_reminder.html", "แจ้งเตือน: การจองของคุณใกล้ถึงกำหนด")
 
 	return nil
 }

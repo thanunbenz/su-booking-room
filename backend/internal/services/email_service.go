@@ -192,11 +192,14 @@ func (s *EmailService) renderTemplate(templateName string, data map[string]inter
 	}
 
 	var buf bytes.Buffer
+	log.Printf("🔍 Rendering template: %s\n", templateName)
 	if err := s.templates.ExecuteTemplate(&buf, templateName, data); err != nil {
-		log.Printf("⚠️  Template rendering failed, using fallback: %v\n", err)
+		log.Printf("⚠️  Template rendering failed for %s: %v\n", templateName, err)
+		log.Printf("⚠️  Using fallback template\n")
 		return s.renderFallbackTemplate(templateName, data), nil
 	}
 
+	log.Printf("✅ Template %s rendered successfully\n", templateName)
 	return buf.String(), nil
 }
 
@@ -248,29 +251,16 @@ func (s *EmailService) renderFallbackTemplate(templateName string, data map[stri
 func loadEmailTemplates() (*template.Template, error) {
 	// กำหนด path ของ templates directory
 	templatesDir := filepath.Join("internal", "templates", "email")
+	pattern := filepath.Join(templatesDir, "*.html")
 
-	// โหลด base template
-	tmpl := template.New("")
-
-	// Template files
-	templateFiles := []string{
-		"base.html",
-		"booking_created.html",
-		"booking_approved.html",
-		"booking_rejected.html",
-		"booking_cancelled.html",
-		"booking_reminder.html",
+	// โหลดทุก template ในครั้งเดียว
+	tmpl, err := template.ParseGlob(pattern)
+	if err != nil {
+		log.Printf("⚠️  Could not load templates: %v\n", err)
+		return template.New(""), nil
 	}
 
-	for _, filename := range templateFiles {
-		filePath := filepath.Join(templatesDir, filename)
-		_, err := tmpl.ParseFiles(filePath)
-		if err != nil {
-			// ไม่ return error ถ้าไฟล์ไม่มี เพราะจะใช้ fallback แทน
-			log.Printf("⚠️  Could not load template %s: %v\n", filename, err)
-		}
-	}
-
+	log.Printf("✅ Loaded email templates: %v\n", tmpl.DefinedTemplates())
 	return tmpl, nil
 }
 

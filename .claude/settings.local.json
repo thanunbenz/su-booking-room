@@ -49,7 +49,14 @@
       "Bash(sed -i '' 's/booking\\\\.User\\\\.Last_name/booking.User.LastName/g' internal/services/notification_service.go)",
       "Bash(docker-compose up -d mailhog)",
       "Bash(timeout 5 ./bin/server)",
-      "Read(//private/tmp/**)"
+      "Read(//private/tmp/**)",
+      "Bash(python3 -c \"import sys, email.header; print\\(email.header.decode_header\\(sys.stdin.read\\(\\).strip\\(\\)\\)[0][0].decode\\(''utf-8''\\)\\)\")",
+      "Bash(python3 -c \"import sys, quopri; print\\(quopri.decodestring\\(sys.stdin.read\\(\\)\\).decode\\(''utf-8''\\)\\)\")",
+      "Bash(for f in backend/internal/templates/email/*.html)",
+      "Bash(do echo \"=== $f ===\")",
+      "Read(//Users/sumbenz/workspace/su-booking-room/backend/**)",
+      "Bash(done)",
+      "Bash(for f in internal/templates/email/*.html)"
     ],
     "deny": [],
     "ask": []
