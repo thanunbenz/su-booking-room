@@ -135,7 +135,7 @@ ports: ## Check which ports frontend/backend are running on
 	@lsof -i :3000 -sTCP:LISTEN || echo "  $(RED)✗ No process running on port 3000$(NC)"
 	@echo ""
 
-kill-all: ## Kill all frontend and backend processes
+kill: ## Kill all frontend and backend processes
 	@echo "$(BLUE)Stopping all frontend and backend processes...$(NC)"
 	@echo ""
 	@echo "$(YELLOW)Killing processes on port 8000 (backend)...$(NC)"

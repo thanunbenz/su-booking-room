@@ -8,7 +8,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func SetupRoutes(app *fiber.App, db *gorm.DB, notifService *services.NotificationService) {
+func SetupRoutes(app *fiber.App, db *gorm.DB, notifService *services.NotificationService, emailService *services.EmailService) {
 	// Initialize handlers with DB connection
 	authHandler := handlers.NewAuthHandler(db)
 	userHandler := handlers.NewUserHandler(db)
@@ -19,6 +19,7 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, notifService *services.Notificatio
 	bookingHandler := handlers.NewBookingHandler(db, notifService)
 	seedHandler := handlers.NewSeedHandler(db)
 	notificationHandler := handlers.NewNotificationHandler(notifService)
+	testHandler := handlers.NewTestHandler(emailService)
 
 	// API v1 group
 	api := app.Group("/api/v1")
@@ -107,6 +108,10 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, notifService *services.Notificatio
 	seed := api.Group("/seed")
 	seed.Post("/all", middleware.AuthMiddleware, middleware.AdminOnly, seedHandler.SeedAll)    // Admin only - สร้าง mock data
 	seed.Delete("/clear", middleware.AuthMiddleware, middleware.AdminOnly, seedHandler.ClearAll) // Admin only - ลบข้อมูลทั้งหมด
+
+	// Test routes (for development/testing)
+	test := api.Group("/test")
+	test.Post("/email", testHandler.SendTestEmail) // Test email - send test email
 }
 
 

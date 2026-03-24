@@ -72,7 +72,7 @@ func main() {
 	}))
 
 	// Setup routes
-	routes.SetupRoutes(app, config.DB, notificationService)
+	routes.SetupRoutes(app, config.DB, notificationService, emailService)
 
 	port := 8000
 	log.Printf("🚀 Server starting on port %d", port)
