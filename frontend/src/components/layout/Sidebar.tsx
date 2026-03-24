@@ -1,6 +1,6 @@
 'use client';
 
-import { FaHome, FaBook, FaTimes, FaBuilding, FaUsers } from 'react-icons/fa';
+import { FaHome, FaBook, FaTimes, FaBuilding, FaUsers, FaBell } from 'react-icons/fa';
 import { TbDoor, TbCalendar } from 'react-icons/tb';
 import { MdAdminPanelSettings } from 'react-icons/md';
 import Link from 'next/link';
@@ -123,6 +123,15 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             >
               <FaUsers className="text-lg" />
               <span>จัดการผู้ใช้งาน</span>
+            </Link>
+
+            <Link
+              href="/admin/notifications"
+              className="flex items-center gap-3 px-4 py-3 text-white hover:bg-teal-600 dark:hover:bg-teal-700 rounded-lg transition-colors font-medium"
+              onClick={onClose}
+            >
+              <FaBell className="text-lg" />
+              <span>การแจ้งเตือน</span>
             </Link>
           </>
         )}

@@ -21,12 +21,18 @@ import type {
   UpdateScheduleRequest,
   BulkCreateScheduleRequest,
   Booking,
+  BookingGroup,
   CreateBookingRequest,
+  CreateMultiBookingRequest,
   UpdateBookingStatusRequest,
   CreateUserRequest,
   UpdateUserRequest,
   CreateRoleRequest,
   UpdateRoleRequest,
+  NotificationSettings,
+  NotificationsResponse,
+  SendTestEmailRequest,
+  TestEmailResponse,
 } from './types'
 
 // Base URL
@@ -389,6 +395,32 @@ export const bookingApi = {
       method: 'DELETE',
     })
   },
+
+  /**
+   * Create multi-room booking (books multiple rooms with same time slot)
+   */
+  createMulti: async (data: CreateMultiBookingRequest): Promise<ApiResponse<BookingGroup>> => {
+    return apiCall('/bookings/multi', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  },
+
+  /**
+   * Get booking group by group ID
+   */
+  getGroup: async (groupId: number): Promise<ApiResponse<BookingGroup>> => {
+    return apiCall(`/bookings/group/${groupId}`)
+  },
+
+  /**
+   * Cancel entire booking group
+   */
+  cancelGroup: async (groupId: number): Promise<ApiResponse<BookingGroup>> => {
+    return apiCall(`/bookings/group/${groupId}`, {
+      method: 'DELETE',
+    })
+  },
 }
 
 // ===================================
@@ -493,6 +525,71 @@ export const roleApi = {
   delete: async (id: number): Promise<ApiResponse<null>> => {
     return apiCall(`/roles/${id}`, {
       method: 'DELETE',
+    })
+  },
+}
+
+// ===================================
+// Notification API
+// ===================================
+
+export const notificationApi = {
+  /**
+   * Get user notifications
+   */
+  getMyNotifications: async (params?: {
+    limit?: number
+    unread_only?: boolean
+  }): Promise<ApiResponse<NotificationsResponse>> => {
+    const queryParams = new URLSearchParams()
+    if (params?.limit) queryParams.append('limit', params.limit.toString())
+    if (params?.unread_only) queryParams.append('unread_only', 'true')
+
+    const query = queryParams.toString()
+    return apiCall(`/notifications/my${query ? `?${query}` : ''}`)
+  },
+
+  /**
+   * Mark notification as read
+   */
+  markAsRead: async (id: number): Promise<ApiResponse<null>> => {
+    return apiCall(`/notifications/${id}/read`, {
+      method: 'PATCH',
+    })
+  },
+
+  /**
+   * Mark all notifications as read
+   */
+  markAllAsRead: async (): Promise<ApiResponse<null>> => {
+    return apiCall('/notifications/read-all', {
+      method: 'PATCH',
+    })
+  },
+
+  /**
+   * Delete notification
+   */
+  delete: async (id: number): Promise<ApiResponse<null>> => {
+    return apiCall(`/notifications/${id}`, {
+      method: 'DELETE',
+    })
+  },
+
+  /**
+   * Get notification/email settings (Admin only)
+   */
+  getSettings: async (): Promise<ApiResponse<NotificationSettings>> => {
+    return apiCall('/notifications/settings')
+  },
+
+  /**
+   * Send test email (Admin only)
+   */
+  sendTestEmail: async (data: SendTestEmailRequest): Promise<ApiResponse<TestEmailResponse>> => {
+    return apiCall('/notifications/test-email', {
+      method: 'POST',
+      body: JSON.stringify(data),
     })
   },
 }

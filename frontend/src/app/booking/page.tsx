@@ -6,7 +6,7 @@ import { withRole } from '@/lib/withRole';
 import MainLayout from '@/components/layout/MainLayout';
 import { bookingApi, buildingApi, roomApi, scheduleApi } from '@/lib/api/client';
 import { Building, Room, Booking, FixedSchedule } from '@/lib/api/types';
-import { TbCalendar, TbClock, TbMapPin, TbFileText, TbTool, TbAlertCircle } from 'react-icons/tb';
+import { TbCalendar, TbClock, TbMapPin, TbFileText, TbTool, TbAlertCircle, TbLayoutGrid } from 'react-icons/tb';
 
 function BookingPage() {
   const router = useRouter();
@@ -21,6 +21,10 @@ function BookingPage() {
   const [existingBookings, setExistingBookings] = useState<Booking[]>([]);
   const [fixedSchedules, setFixedSchedules] = useState<FixedSchedule[]>([]);
   const [loadingAvailability, setLoadingAvailability] = useState(false);
+
+  // Multi-room mode
+  const [isMultiRoom, setIsMultiRoom] = useState(false);
+  const [selectedRoomIds, setSelectedRoomIds] = useState<number[]>([]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -48,13 +52,13 @@ function BookingPage() {
   }, [selectedBuildingId, rooms]);
 
   useEffect(() => {
-    if (formData.room_id && formData.booking_date) {
+    if (!isMultiRoom && formData.room_id && formData.booking_date) {
       fetchAvailability();
-    } else {
+    } else if (!isMultiRoom) {
       setExistingBookings([]);
       setFixedSchedules([]);
     }
-  }, [formData.room_id, formData.booking_date]);
+  }, [formData.room_id, formData.booking_date, isMultiRoom]);
 
   const fetchAvailability = async () => {
     if (!formData.room_id || !formData.booking_date) return;
@@ -112,16 +116,33 @@ function BookingPage() {
     setSuccess('');
   };
 
+  const handleRoomCheckbox = (roomId: number, checked: boolean) => {
+    setError('');
+    setSuccess('');
+    if (checked) {
+      setSelectedRoomIds((prev) => [...prev, roomId]);
+    } else {
+      setSelectedRoomIds((prev) => prev.filter((id) => id !== roomId));
+    }
+  };
+
+  const handleModeToggle = (multi: boolean) => {
+    setIsMultiRoom(multi);
+    setError('');
+    setSuccess('');
+    if (multi) {
+      setFormData({ ...formData, room_id: 0 });
+    } else {
+      setSelectedRoomIds([]);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess('');
 
-    // Validation
-    if (!formData.room_id) {
-      setError('กรุณาเลือกห้อง');
-      return;
-    }
+    // Shared validations
     if (!formData.title.trim()) {
       setError('กรุณากรอกหัวข้อการจอง');
       return;
@@ -131,7 +152,6 @@ function BookingPage() {
       return;
     }
 
-    // Check if booking date is in the past
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const bookingDate = new Date(formData.booking_date);
@@ -147,6 +167,24 @@ function BookingPage() {
       return;
     }
 
+    if (isMultiRoom) {
+      // Multi-room validation
+      if (selectedRoomIds.length < 2) {
+        setError('กรุณาเลือกอย่างน้อย 2 ห้องสำหรับการจองหลายห้อง');
+        return;
+      }
+      await submitMultiRoom();
+    } else {
+      // Single room validation
+      if (!formData.room_id) {
+        setError('กรุณาเลือกห้อง');
+        return;
+      }
+      await submitSingleRoom();
+    }
+  };
+
+  const submitSingleRoom = async () => {
     try {
       setSubmitting(true);
       await bookingApi.create({
@@ -159,45 +197,79 @@ function BookingPage() {
         end_time: formData.end_time,
       });
 
-      // setSuccess('สร้างการจองสำเร็จ! รอการอนุมัติจากแอดมิน');
       setSuccess('สร้างการจองสำเร็จ! การจองของคุณได้รับการอนุมัติอัตโนมัติแล้ว');
-      // Reset form
-      setFormData({
-        room_id: 0,
-        title: '',
-        detail: '',
-        equipment_request: '',
-        booking_date: '',
-        start_time: '09:00',
-        end_time: '10:00',
-      });
-      setSelectedBuildingId(0);
+      resetForm();
 
-      // Redirect to my bookings after 2 seconds
       setTimeout(() => {
         router.push('/my-bookings');
       }, 2000);
     } catch (err: any) {
-      const errorMessage = err?.error?.message || '';
-
-      if (errorMessage.includes('Time slot is already booked')) {
-        setError('ช่วงเวลานี้มีคนจองแล้ว กรุณาเลือกเวลาอื่น');
-      } else if (errorMessage.includes('conflicts with fixed schedule')) {
-        setError('ช่วงเวลานี้มีตารางการจอง กรุณาเลือกเวลาอื่น');
-      } else if (errorMessage.includes('Cannot book in the past')) {
-        setError('ไม่สามารถจองย้อนหลังได้');
-      } else if (errorMessage.includes('Start time must be before end time')) {
-        setError('เวลาเริ่มต้องน้อยกว่าเวลาสิ้นสุด');
-      } else if (errorMessage.includes('Room not found')) {
-        setError('ไม่พบห้องที่ต้องการจอง');
-      } else if (errorMessage.includes('Missing required fields')) {
-        setError('กรุณากรอกข้อมูลให้ครบถ้วน');
-      } else {
-        setError(errorMessage || 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
-      }
+      handleBookingError(err);
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const submitMultiRoom = async () => {
+    try {
+      setSubmitting(true);
+      await bookingApi.createMulti({
+        room_ids: selectedRoomIds,
+        title: formData.title.trim(),
+        detail: formData.detail.trim(),
+        equipment_request: formData.equipment_request.trim(),
+        booking_date: formData.booking_date,
+        start_time: formData.start_time,
+        end_time: formData.end_time,
+      });
+
+      setSuccess(`สร้างการจอง ${selectedRoomIds.length} ห้องสำเร็จ! การจองทั้งหมดได้รับการอนุมัติอัตโนมัติแล้ว`);
+      resetForm();
+
+      setTimeout(() => {
+        router.push('/my-bookings');
+      }, 2000);
+    } catch (err: any) {
+      handleBookingError(err);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleBookingError = (err: any) => {
+    const errorMessage = err?.error?.message || '';
+
+    if (errorMessage.includes('Time slot is already booked')) {
+      setError(errorMessage);
+    } else if (errorMessage.includes('conflicts with fixed schedule')) {
+      setError(errorMessage);
+    } else if (errorMessage.includes('Cannot book in the past')) {
+      setError('ไม่สามารถจองย้อนหลังได้');
+    } else if (errorMessage.includes('Start time must be before end time')) {
+      setError('เวลาเริ่มต้องน้อยกว่าเวลาสิ้นสุด');
+    } else if (errorMessage.includes('Room not found') || errorMessage.includes('rooms not found')) {
+      setError('ไม่พบห้องที่ต้องการจอง');
+    } else if (errorMessage.includes('at least 2 rooms')) {
+      setError('กรุณาเลือกอย่างน้อย 2 ห้องสำหรับการจองหลายห้อง');
+    } else if (errorMessage.includes('Duplicate room ID')) {
+      setError('มีห้องที่ซ้ำกันในรายการ');
+    } else {
+      setError(errorMessage || 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      room_id: 0,
+      title: '',
+      detail: '',
+      equipment_request: '',
+      booking_date: '',
+      start_time: '09:00',
+      end_time: '10:00',
+    });
+    setSelectedBuildingId(0);
+    setSelectedRoomIds([]);
   };
 
   const getBuildingName = (buildingId: number) => {
@@ -209,6 +281,19 @@ function BookingPage() {
     if (!timeString) return '';
     const parts = timeString.split(':');
     return `${parts[0]}:${parts[1]}`;
+  };
+
+  const getSelectedRoomsSummary = () => {
+    return selectedRoomIds.map((id) => {
+      const room = rooms.find((r) => r.room_id === id);
+      if (!room) return null;
+      return {
+        room_id: room.room_id,
+        name: room.name,
+        building: getBuildingName(room.building_id),
+        capacity: room.capacity,
+      };
+    }).filter(Boolean);
   };
 
   if (loading) {
@@ -234,7 +319,7 @@ function BookingPage() {
             จองห้องเรียน
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            กรอกข้อมูลการจองห้องเรียน รอการอนุมัติจากแอดมิน
+            กรอกข้อมูลการจองห้องเรียน
           </p>
         </div>
 
@@ -254,6 +339,38 @@ function BookingPage() {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 space-y-6">
+          {/* Booking Mode Toggle */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <TbLayoutGrid className="inline w-4 h-4 mr-1" />
+              โหมดการจอง
+            </label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => handleModeToggle(false)}
+                className={`flex-1 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+                  !isMultiRoom
+                    ? 'bg-teal-700 text-white'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                ห้องเดียว
+              </button>
+              <button
+                type="button"
+                onClick={() => handleModeToggle(true)}
+                className={`flex-1 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+                  isMultiRoom
+                    ? 'bg-teal-700 text-white'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                หลายห้อง
+              </button>
+            </div>
+          </div>
+
           {/* Building Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -264,7 +381,9 @@ function BookingPage() {
               value={selectedBuildingId}
               onChange={(e) => {
                 setSelectedBuildingId(Number(e.target.value));
-                setFormData({ ...formData, room_id: 0 });
+                if (!isMultiRoom) {
+                  setFormData({ ...formData, room_id: 0 });
+                }
               }}
               className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
@@ -277,27 +396,110 @@ function BookingPage() {
             </select>
           </div>
 
-          {/* Room Selection */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              <TbMapPin className="inline w-4 h-4 mr-1" />
-              เลือกห้อง <span className="text-red-500">*</span>
-            </label>
-            <select
-              name="room_id"
-              value={formData.room_id}
-              onChange={handleInputChange}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              required
-            >
-              <option value={0}>-- เลือกห้อง --</option>
-              {filteredRooms.map((room) => (
-                <option key={room.room_id} value={room.room_id}>
-                  {room.name} - {getBuildingName(room.building_id)} (ความจุ: {room.capacity} คน)
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Room Selection - Single Mode */}
+          {!isMultiRoom && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <TbMapPin className="inline w-4 h-4 mr-1" />
+                เลือกห้อง <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="room_id"
+                value={formData.room_id}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                required
+              >
+                <option value={0}>-- เลือกห้อง --</option>
+                {filteredRooms.map((room) => (
+                  <option key={room.room_id} value={room.room_id}>
+                    {room.name} - {getBuildingName(room.building_id)} (ความจุ: {room.capacity} คน)
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Room Selection - Multi Mode */}
+          {isMultiRoom && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <TbMapPin className="inline w-4 h-4 mr-1" />
+                เลือกห้อง (อย่างน้อย 2 ห้อง) <span className="text-red-500">*</span>
+              </label>
+              <div className="border border-gray-300 dark:border-gray-600 rounded-xl overflow-hidden max-h-64 overflow-y-auto">
+                {filteredRooms.length === 0 ? (
+                  <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+                    ไม่พบห้อง
+                  </div>
+                ) : (
+                  filteredRooms.map((room) => (
+                    <label
+                      key={room.room_id}
+                      className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors border-b border-gray-100 dark:border-gray-700 last:border-b-0 ${
+                        selectedRoomIds.includes(room.room_id)
+                          ? 'bg-teal-50 dark:bg-teal-900/20'
+                          : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedRoomIds.includes(room.room_id)}
+                        onChange={(e) => handleRoomCheckbox(room.room_id, e.target.checked)}
+                        className="w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500 dark:border-gray-600 dark:bg-gray-700"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                          {room.name}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {getBuildingName(room.building_id)} | ความจุ: {room.capacity} คน
+                        </p>
+                      </div>
+                      {selectedRoomIds.includes(room.room_id) && (
+                        <span className="flex-shrink-0 w-5 h-5 bg-teal-600 rounded-full flex items-center justify-center">
+                          <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </span>
+                      )}
+                    </label>
+                  ))
+                )}
+              </div>
+              <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                เลือกแล้ว {selectedRoomIds.length} ห้อง
+              </p>
+            </div>
+          )}
+
+          {/* Selected Rooms Summary (Multi-room mode) */}
+          {isMultiRoom && selectedRoomIds.length > 0 && (
+            <div className="bg-teal-50 dark:bg-teal-900/10 border border-teal-200 dark:border-teal-800 rounded-xl p-4">
+              <h3 className="text-sm font-semibold text-teal-800 dark:text-teal-300 mb-2">
+                ห้องที่เลือก ({selectedRoomIds.length} ห้อง)
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {getSelectedRoomsSummary().map((room) => room && (
+                  <span
+                    key={room.room_id}
+                    className="inline-flex items-center gap-1 px-3 py-1 bg-white dark:bg-gray-800 border border-teal-300 dark:border-teal-700 rounded-lg text-sm text-gray-800 dark:text-gray-200"
+                  >
+                    {room.name}
+                    <button
+                      type="button"
+                      onClick={() => handleRoomCheckbox(room.room_id, false)}
+                      className="ml-1 text-gray-400 hover:text-red-500 transition-colors"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Title */}
           <div>
@@ -412,13 +614,18 @@ function BookingPage() {
               disabled={submitting}
               className="px-6 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {submitting ? 'กำลังส่งคำขอ...' : 'ส่งคำขอจอง'}
+              {submitting
+                ? 'กำลังส่งคำขอ...'
+                : isMultiRoom
+                  ? `จอง ${selectedRoomIds.length} ห้อง`
+                  : 'ส่งคำขอจอง'
+              }
             </button>
           </div>
         </form>
 
-        {/* Availability Display - Show when room and date are selected */}
-        {formData.room_id > 0 && formData.booking_date && (
+        {/* Availability Display - Show when room and date are selected (single mode only) */}
+        {!isMultiRoom && formData.room_id > 0 && formData.booking_date && (
           <div className="mt-6 bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
             <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
               <TbAlertCircle className="text-teal-700 dark:text-teal-500" />

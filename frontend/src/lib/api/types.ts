@@ -135,6 +135,7 @@ export interface Booking {
   booking_id: number
   user_id: number
   room_id: number
+  group_id?: number | null
   title: string
   detail: string
   equipment_request: string
@@ -147,10 +148,30 @@ export interface Booking {
   updated_at: string
   user?: User // Optional because it's only included when preloaded
   room?: Room // Optional because it's only included when preloaded
+  group?: BookingGroup | null
+}
+
+export interface BookingGroup {
+  group_id: number
+  user_id: number
+  title: string
+  created_at: string
+  user?: User
+  bookings?: Booking[]
 }
 
 export interface CreateBookingRequest {
   room_id: number
+  title: string
+  detail?: string
+  equipment_request?: string
+  booking_date: string // YYYY-MM-DD
+  start_time: string // HH:MM
+  end_time: string // HH:MM
+}
+
+export interface CreateMultiBookingRequest {
+  room_ids: number[]
   title: string
   detail?: string
   equipment_request?: string
@@ -209,6 +230,49 @@ export interface ApiError {
     message: string
     details?: any
   }
+}
+
+// === Notification Types ===
+
+export interface Notification {
+  notification_id: number
+  user_id: number
+  booking_id: number
+  type: string
+  message: string
+  is_read: boolean
+  email_sent: boolean
+  email_sent_at?: string
+  email_error?: string
+  created_at: string
+}
+
+export interface NotificationSettings {
+  email_service: {
+    queue_size: number
+    queue_capacity: number
+    workers: number
+    enabled: boolean
+  }
+  templates: string[]
+}
+
+export interface SendTestEmailRequest {
+  to: string
+  subject?: string
+  message?: string
+}
+
+export interface TestEmailResponse {
+  to: string
+  subject: string
+  status: string
+}
+
+export interface NotificationsResponse {
+  notifications: Notification[]
+  total: number
+  unread_count: number
 }
 
 // === Error Codes ===

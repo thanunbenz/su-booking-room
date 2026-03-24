@@ -86,6 +86,7 @@ type Booking struct {
 	BookingID        int        `gorm:"primaryKey;autoIncrement" json:"booking_id"`
 	UserID           int        `gorm:"not null;index" json:"user_id"`
 	RoomID           int        `gorm:"not null;index:idx_room_date_time" json:"room_id" validate:"required,gt=0"`
+	GroupID          *int       `gorm:"index" json:"group_id,omitempty"` // nullable - links to booking_groups for multi-room bookings
 	Title            string     `gorm:"type:varchar(255);not null" json:"title" validate:"required,min=1,max=255"`
 	Detail           string     `gorm:"type:text" json:"detail" validate:"omitempty,max=5000"`
 	EquipmentRequest string     `gorm:"type:text" json:"equipment_request" validate:"omitempty,max=5000"` // เช่น: คอมพิวเตอร์ 20 เครื่อง, โปรเจคเตอร์ 1 เครื่อง
@@ -98,8 +99,9 @@ type Booking struct {
 	UpdatedAt        time.Time  `gorm:"default:now()" json:"updated_at"`
 
 	// Relations
-	User User `gorm:"foreignKey:UserID;references:UserID" json:"user"`
-	Room Room `gorm:"foreignKey:RoomID;references:RoomID" json:"room"`
+	User  User          `gorm:"foreignKey:UserID;references:UserID" json:"user"`
+	Room  Room          `gorm:"foreignKey:RoomID;references:RoomID" json:"room"`
+	Group *BookingGroup `gorm:"foreignKey:GroupID;references:GroupID" json:"group,omitempty"`
 }
 
 func (Booking) TableName() string {

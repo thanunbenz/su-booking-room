@@ -48,7 +48,10 @@ func BookingRateLimiter(c *fiber.Ctx) error {
 		return c.Next()
 	}
 
-	userID := c.Locals("user_id").(uint)
+	userID, ok := c.Locals("user_id").(uint)
+	if !ok {
+		return utils.StandardResponse(c, fiber.StatusUnauthorized, nil, "Unauthorized")
+	}
 
 	if !bookingLimiter.Allow(userID) {
 		return utils.StandardResponse(c, fiber.StatusTooManyRequests, nil,

@@ -3,6 +3,14 @@
 .env.local
 .env.*.local
 
+# Claude
+.claude-*.json
+claude-*.log
+.claude/
+.claude*
+.mcp.json
+.swarm
+
 # Docker
 docker-compose.override.yml
 

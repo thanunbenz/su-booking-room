@@ -65,8 +65,12 @@ func main() {
 	// Middleware
 	app.Use(recover.New())               // Recover from panics
 	app.Use(middleware.LoggerMiddleware()) // Custom logger
+	corsOrigins := os.Getenv("CORS_ORIGINS")
+	if corsOrigins == "" {
+		corsOrigins = "http://localhost:3000"
+	}
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: "*",
+		AllowOrigins: corsOrigins,
 		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
 		AllowMethods: "GET, POST, PUT, DELETE, PATCH, OPTIONS",
 	}))

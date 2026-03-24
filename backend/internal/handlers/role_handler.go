@@ -32,7 +32,10 @@ func (h *RoleHandler) GetAll(c *fiber.Ctx) error {
 
 // GetByID - GET /roles/:id
 func (h *RoleHandler) GetByID(c *fiber.Ctx) error {
-	id, _ := strconv.Atoi(c.Params("id"))
+	id, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return utils.BadRequestResponse(c, "Invalid ID")
+	}
 
 	var role models.Role
 	if err := h.DB.First(&role, "role_id = ?", id).Error; err != nil {
@@ -85,7 +88,10 @@ func (h *RoleHandler) Create(c *fiber.Ctx) error {
 
 // Update - PUT /roles/:id (Admin only)
 func (h *RoleHandler) Update(c *fiber.Ctx) error {
-	id, _ := strconv.Atoi(c.Params("id"))
+	id, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return utils.BadRequestResponse(c, "Invalid ID")
+	}
 
 	// หา role
 	var role models.Role
@@ -129,7 +135,10 @@ func (h *RoleHandler) Update(c *fiber.Ctx) error {
 
 // Delete - DELETE /roles/:id (Admin only)
 func (h *RoleHandler) Delete(c *fiber.Ctx) error {
-	id, _ := strconv.Atoi(c.Params("id"))
+	id, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return utils.BadRequestResponse(c, "Invalid ID")
+	}
 
 	// หา role
 	var role models.Role

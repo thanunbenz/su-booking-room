@@ -18,6 +18,14 @@ func getEnv(key, defaultValue string) string {
 	return defaultValue
 }
 
+func getEnvRequired(key string) string {
+	value := os.Getenv(key)
+	if value == "" {
+		log.Fatalf("Required environment variable %s is not set", key)
+	}
+	return value
+}
+
 func getEnvInt(key string, defaultValue int) int {
 	if value := os.Getenv(key); value != "" {
 		if intValue, err := strconv.Atoi(value); err == nil {
@@ -30,8 +38,8 @@ func getEnvInt(key string, defaultValue int) int {
 var (
 	host     = getEnv("DB_HOST", "localhost")
 	port     = getEnvInt("DB_PORT", 5432)
-	user     = getEnv("DB_USER", "sumbenz")
-	password = getEnv("DB_PASSWORD", "sumbenz2806")
+	user     = getEnvRequired("DB_USER")
+	password = getEnvRequired("DB_PASSWORD")
 	dbname   = getEnv("DB_NAME", "su_booking_room")
 )
 
@@ -74,6 +82,10 @@ func AutoMigrate() error {
 	}
 
 	if err := DB.AutoMigrate(&models.FixedSchedule{}); err != nil {
+		return err
+	}
+
+	if err := DB.AutoMigrate(&models.BookingGroup{}); err != nil {
 		return err
 	}
 

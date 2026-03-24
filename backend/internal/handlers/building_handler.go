@@ -45,7 +45,10 @@ func (h *BuildingHandler) GetNameByID(c *fiber.Ctx) error {
 
 // GetByID - GET /buildings/:id
 func (h *BuildingHandler) GetByID(c *fiber.Ctx) error {
-	id, _ := strconv.Atoi(c.Params("id"))
+	id, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return utils.BadRequestResponse(c, "Invalid ID")
+	}
 
 	var building models.Building
 	if err := h.DB.First(&building, "building_id = ?", id).Error; err != nil {
@@ -89,7 +92,10 @@ func (h *BuildingHandler) Create(c *fiber.Ctx) error {
 
 // Update - PUT /buildings/:id
 func (h *BuildingHandler) Update(c *fiber.Ctx) error {
-	id, _ := strconv.Atoi(c.Params("id"))
+	id, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return utils.BadRequestResponse(c, "Invalid ID")
+	}
 
 	// หา building
 	var building models.Building
@@ -121,7 +127,10 @@ func (h *BuildingHandler) Update(c *fiber.Ctx) error {
 // Delete - DELETE /buildings/:id
 // ลบ building พร้อมทั้ง rooms, bookings และ fixed_schedules ที่เกี่ยวข้องทั้งหมด (cascade delete)
 func (h *BuildingHandler) Delete(c *fiber.Ctx) error {
-	id, _ := strconv.Atoi(c.Params("id"))
+	id, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return utils.BadRequestResponse(c, "Invalid ID")
+	}
 
 	// ตรวจสอบว่า building มีอยู่จริงหรือไม่
 	var building models.Building
@@ -133,7 +142,7 @@ func (h *BuildingHandler) Delete(c *fiber.Ctx) error {
 	}
 
 	// ใช้ transaction เพื่อความปลอดภัย - ถ้า error ระหว่างทางจะ rollback ทั้งหมด
-	err := h.DB.Transaction(func(tx *gorm.DB) error {
+	err = h.DB.Transaction(func(tx *gorm.DB) error {
 		// Step 1: หา rooms ทั้งหมดในตึกนี้
 		var rooms []models.Room
 		if err := tx.Where("building_id = ?", id).Find(&rooms).Error; err != nil {

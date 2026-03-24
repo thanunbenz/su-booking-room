@@ -17,9 +17,9 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, notifService *services.Notificatio
 	roomHandler := handlers.NewRoomHandler(db)
 	scheduleHandler := handlers.NewFixedScheduleHandler(db)
 	bookingHandler := handlers.NewBookingHandler(db, notifService)
+	multiBookingHandler := handlers.NewMultiBookingHandler(db, notifService)
 	seedHandler := handlers.NewSeedHandler(db)
-	notificationHandler := handlers.NewNotificationHandler(notifService)
-	testHandler := handlers.NewTestHandler(emailService)
+	notificationHandler := handlers.NewNotificationHandler(notifService, emailService)
 
 	// API v1 group
 	api := app.Group("/api/v1")
@@ -68,7 +68,13 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, notifService *services.Notificatio
 	bookings := api.Group("/bookings")
 	// GET routes - ordered for proper query parameter handling
 	bookings.Get("/my", middleware.AuthMiddleware, bookingHandler.GetMyBookings)                                // User - ดูการจองของตัวเอง
-	bookings.Get("/",  bookingHandler.GetAll)                   // Admin only - ดูการจองทั้งหมด (supports ?status=, ?room_id=, ?booking_date= query params)
+	bookings.Get("/", middleware.AuthMiddleware, middleware.AdminOnly, bookingHandler.GetAll) // Admin only - ดูการจองทั้งหมด (supports ?status=, ?room_id=, ?booking_date= query params)
+
+	// Multi-room booking routes (must be before /:id to avoid route conflict)
+	bookings.Post("/multi", middleware.AuthMiddleware, middleware.BookingRateLimiter, multiBookingHandler.CreateMulti)   // User - สร้างการจองหลายห้อง
+	bookings.Get("/group/:group_id", middleware.AuthMiddleware, multiBookingHandler.GetByGroupID)                       // User/Admin - ดูการจองกลุ่ม
+	bookings.Delete("/group/:group_id", middleware.AuthMiddleware, multiBookingHandler.CancelGroup)                     // User - ยกเลิกการจองกลุ่ม
+
 	bookings.Get("/:id", middleware.AuthMiddleware, bookingHandler.GetByID)                                     // User/Admin - ดูการจองตาม ID
 
 	// POST routes
@@ -100,6 +106,8 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, notifService *services.Notificatio
 	// Notification routes (protected)
 	notifications := api.Group("/notifications")
 	notifications.Get("/my", middleware.AuthMiddleware, notificationHandler.GetMyNotifications)           // ดู notifications ของตัวเอง
+	notifications.Get("/settings", middleware.AuthMiddleware, middleware.AdminOnly, notificationHandler.GetSettings)  // Admin only - ดูการตั้งค่า
+	notifications.Post("/test-email", middleware.AuthMiddleware, middleware.AdminOnly, notificationHandler.SendTestEmail) // Admin only - ส่ง test email
 	notifications.Patch("/read-all", middleware.AuthMiddleware, notificationHandler.MarkAllAsRead)        // ทำเครื่องหมายทั้งหมดว่าอ่านแล้ว
 	notifications.Patch("/:id/read", middleware.AuthMiddleware, notificationHandler.MarkAsRead)           // ทำเครื่องหมายว่าอ่านแล้ว
 	notifications.Delete("/:id", middleware.AuthMiddleware, notificationHandler.Delete)                   // ลบ notification
@@ -109,9 +117,6 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, notifService *services.Notificatio
 	seed.Post("/all", middleware.AuthMiddleware, middleware.AdminOnly, seedHandler.SeedAll)    // Admin only - สร้าง mock data
 	seed.Delete("/clear", middleware.AuthMiddleware, middleware.AdminOnly, seedHandler.ClearAll) // Admin only - ลบข้อมูลทั้งหมด
 
-	// Test routes (for development/testing)
-	test := api.Group("/test")
-	test.Post("/email", testHandler.SendTestEmail) // Test email - send test email
 }
 
 

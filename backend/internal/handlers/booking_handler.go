@@ -55,7 +55,6 @@ func (h *BookingHandler) GetAll(c *fiber.Ctx) error {
             return utils.BadRequestResponse(c, "Invalid date format. Use YYYY-MM-DD")
         }
         // Query โดยเปรียบเทียบแค่วันที่ (ไม่รวมเวลา)
-		print("asdas")
         query = query.Where("DATE(booking_date) = ?", parsedDate.Format("2006-01-02"))
     }
 
@@ -66,9 +65,12 @@ func (h *BookingHandler) GetAll(c *fiber.Ctx) error {
 	return utils.StandardResponse(c, fiber.StatusOK, bookings, "Success")
 }
 
-// GetByRoomAndDate - GET /bookings/room/:room_id/availability (ดูการจองของห้องตามวันที่ - สำหรับตรวจสอบความว่าง)
+// GetByRoomAndDate - GET /rooms/:id/availability (ดูการจองของห้องตามวันที่ - สำหรับตรวจสอบความว่าง)
 func (h *BookingHandler) GetByRoomAndDate(c *fiber.Ctx) error {
-	roomID, _ := strconv.Atoi(c.Params("room_id"))
+	roomID, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return utils.BadRequestResponse(c, "Invalid ID")
+	}
 	date := c.Query("date") // format: YYYY-MM-DD
 
 	var bookings []models.Booking
@@ -105,7 +107,10 @@ func (h *BookingHandler) GetMyBookings(c *fiber.Ctx) error {
 
 // GetByID - GET /bookings/:id
 func (h *BookingHandler) GetByID(c *fiber.Ctx) error {
-	id, _ := strconv.Atoi(c.Params("id"))
+	id, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return utils.BadRequestResponse(c, "Invalid ID")
+	}
 
 	var booking models.Booking
 	if err := h.DB.Preload("User.Role").Preload("Room.Building").First(&booking, "booking_id = ?", id).Error; err != nil {
@@ -130,16 +135,10 @@ func (h *BookingHandler) GetByID(c *fiber.Ctx) error {
 func (h *BookingHandler) Create(c *fiber.Ctx) error {
 	var input models.Booking
 
-	fmt.Println("📥 Raw request body:", string(c.Body()))
-
 	// Parse body
 	if err := c.BodyParser(&input); err != nil {
-		fmt.Println("❌ Body parsing failed. Error:", err.Error())
 		return utils.BadRequestResponse(c, "Invalid request body")
 	}
-
-	fmt.Printf("✅ Parsed: RoomID=%d, Title='%s', Date=%v (IsZero=%v), Start='%s', End='%s'\n",
-		input.RoomID, input.Title, input.BookingDate.Time, input.BookingDate.IsZero(), input.StartTime, input.EndTime)
 
 	// ดึง userID จาก JWT token
 	userID := c.Locals("user_id").(uint)
@@ -147,7 +146,6 @@ func (h *BookingHandler) Create(c *fiber.Ctx) error {
 
 	// Validate struct using validator
 	if validationErrors := utils.ValidateStruct(input); validationErrors != nil {
-		fmt.Printf("❌ Validation failed: %+v\n", validationErrors)
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
 			"error": fiber.Map{
@@ -157,23 +155,18 @@ func (h *BookingHandler) Create(c *fiber.Ctx) error {
 			},
 		})
 	}
-	fmt.Println("✅ All required fields validated")
 
 	// Validate start_time < end_time
 	if input.StartTime >= input.EndTime {
-		fmt.Printf("❌ Time validation failed: start=%s, end=%s\n", input.StartTime, input.EndTime)
 		return utils.BadRequestResponse(c, "Start time must be before end time")
 	}
-	fmt.Println("✅ Time range is valid")
 
 	// Validate booking date is not in the past (compare in UTC to avoid timezone issues)
 	today := time.Now().UTC().Truncate(24 * time.Hour)
 	bookingDate := input.BookingDate.Time.UTC().Truncate(24 * time.Hour)
 	if bookingDate.Before(today) {
-		fmt.Printf("❌ Date validation failed: bookingDate=%v, today=%v\n", bookingDate, today)
 		return utils.BadRequestResponse(c, "Cannot book in the past")
 	}
-	fmt.Println("✅ Date is valid (not in the past)")
 
 	// ตรวจสอบว่าห้องมีอยู่จริง
 	var room models.Room
@@ -184,45 +177,69 @@ func (h *BookingHandler) Create(c *fiber.Ctx) error {
 		return utils.InternalServerErrorResponse(c, err.Error())
 	}
 
-	// ตรวจสอบว่าเวลาไม่ซ้อนทับกับการจองอื่น (เฉพาะที่ approved หรือ pending)
-	// Time overlap logic: existing.start_time < new.end_time AND existing.end_time > new.start_time
-	var conflictCount int64
-	h.DB.Model(&models.Booking{}).
-		Where("room_id = ? AND booking_date = ? AND status IN (?, ?)", input.RoomID, input.BookingDate.Time, "pending", "approved").
-		Where("start_time < ? AND end_time > ?", input.EndTime, input.StartTime).
-		Count(&conflictCount)
+	// Wrap conflict check + insert in a transaction with row-level locking
+	// to prevent TOCTOU race conditions that could cause double-bookings.
+	var conflictErr error
+	txErr := h.DB.Transaction(func(tx *gorm.DB) error {
+		// Lock the room row to serialize concurrent booking attempts for the same room
+		if err := tx.Exec("SELECT 1 FROM rooms WHERE room_id = ? FOR UPDATE", input.RoomID).Error; err != nil {
+			return err
+		}
 
-	if conflictCount > 0 {
-		return utils.ConflictResponse(c, "Time slot is already booked")
+		// ตรวจสอบว่าเวลาไม่ซ้อนทับกับการจองอื่น (เฉพาะที่ approved หรือ pending)
+		// Time overlap logic: existing.start_time < new.end_time AND existing.end_time > new.start_time
+		var conflictCount int64
+		tx.Model(&models.Booking{}).
+			Where("room_id = ? AND booking_date = ? AND status IN (?, ?)", input.RoomID, input.BookingDate.Time, "pending", "approved").
+			Where("start_time < ? AND end_time > ?", input.EndTime, input.StartTime).
+			Count(&conflictCount)
+
+		if conflictCount > 0 {
+			conflictErr = fmt.Errorf("time_slot_conflict")
+			return conflictErr
+		}
+
+		// ตรวจสอบว่าเวลาไม่ซ้อนกับตารางการจอง
+		dayOfWeek := int(input.BookingDate.Time.Weekday())
+		if dayOfWeek == 0 {
+			dayOfWeek = 7 // Sunday = 7
+		}
+
+		var scheduleConflictCount int64
+		tx.Model(&models.FixedSchedule{}).
+			Where("room_id = ? AND day_of_week = ?", input.RoomID, dayOfWeek).
+			Where("start_time < ? AND end_time > ?", input.EndTime, input.StartTime).
+			Count(&scheduleConflictCount)
+
+		if scheduleConflictCount > 0 {
+			conflictErr = fmt.Errorf("schedule_conflict")
+			return conflictErr
+		}
+
+		// Set default status
+		input.Status = "approved" // เปลี่ยนเป็น "pending" ถ้าต้องการให้ admin อนุมัติก่อน
+		input.CreatedAt = time.Now()
+		input.UpdatedAt = time.Now()
+
+		// บันทึก
+		if err := tx.Create(&input).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if txErr != nil {
+		if conflictErr != nil && conflictErr.Error() == "time_slot_conflict" {
+			return utils.ConflictResponse(c, "Time slot is already booked")
+		}
+		if conflictErr != nil && conflictErr.Error() == "schedule_conflict" {
+			return utils.ConflictResponse(c, "Time slot conflicts with fixed schedule")
+		}
+		return utils.InternalServerErrorResponse(c, txErr.Error())
 	}
 
-	// ตรวจสอบว่าเวลาไม่ซ้อนกับตารางการจอง
-	dayOfWeek := int(input.BookingDate.Time.Weekday())
-	if dayOfWeek == 0 {
-		dayOfWeek = 7 // Sunday = 7
-	}
-
-	var scheduleConflictCount int64
-	h.DB.Model(&models.FixedSchedule{}).
-		Where("room_id = ? AND day_of_week = ?", input.RoomID, dayOfWeek).
-		Where("start_time < ? AND end_time > ?", input.EndTime, input.StartTime).
-		Count(&scheduleConflictCount)
-
-	if scheduleConflictCount > 0 {
-		return utils.ConflictResponse(c, "Time slot conflicts with fixed schedule")
-	}
-
-	// Set default status
-	input.Status = "approved" // เปลี่ยนเป็น "pending" ถ้าต้องการให้ admin อนุมัติก่อน
-	input.CreatedAt = time.Now()
-	input.UpdatedAt = time.Now()
-
-	// บันทึก
-	if err := h.DB.Create(&input).Error; err != nil {
-		return utils.InternalServerErrorResponse(c, err.Error())
-	}
-
-	// ส่ง notification (async - ไม่ block response)
+	// Send notification after transaction commits successfully (async - does not block response)
 	if h.NotifService != nil {
 		go h.NotifService.NotifyBookingCreated(input.BookingID)
 	}
@@ -232,7 +249,10 @@ func (h *BookingHandler) Create(c *fiber.Ctx) error {
 
 // UpdateStatus - PATCH /bookings/:id/status (Admin only - อนุมัติ/ปฏิเสธ/ยกเลิก)
 func (h *BookingHandler) UpdateStatus(c *fiber.Ctx) error {
-	id, _ := strconv.Atoi(c.Params("id"))
+	id, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return utils.BadRequestResponse(c, "Invalid ID")
+	}
 
 	// หา booking
 	var booking models.Booking
@@ -292,7 +312,10 @@ func (h *BookingHandler) UpdateStatus(c *fiber.Ctx) error {
 
 // Cancel - DELETE /bookings/:id/cancel (ยกเลิกการจองของตัวเอง)
 func (h *BookingHandler) Cancel(c *fiber.Ctx) error {
-	id, _ := strconv.Atoi(c.Params("id"))
+	id, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return utils.BadRequestResponse(c, "Invalid ID")
+	}
 	userID := c.Locals("user_id").(uint)
 
 	// หา booking
@@ -333,7 +356,10 @@ func (h *BookingHandler) Cancel(c *fiber.Ctx) error {
 
 // Delete - DELETE /bookings/:id (Admin only - ลบการจอง)
 func (h *BookingHandler) Delete(c *fiber.Ctx) error {
-	id, _ := strconv.Atoi(c.Params("id"))
+	id, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return utils.BadRequestResponse(c, "Invalid ID")
+	}
 
 	// หา booking
 	var booking models.Booking

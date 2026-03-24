@@ -49,7 +49,10 @@ func (h *UserHandler) GetAll(c *fiber.Ctx) error {
 
 // GetByID - GET /users/:id (Admin only)
 func (h *UserHandler) GetByID(c *fiber.Ctx) error {
-	id, _ := strconv.Atoi(c.Params("id"))
+	id, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return utils.BadRequestResponse(c, "Invalid ID")
+	}
 
 	var user models.User
 	if err := h.DB.Preload("Role").First(&user, "user_id = ?", id).Error; err != nil {
@@ -142,7 +145,10 @@ func (h *UserHandler) Create(c *fiber.Ctx) error {
 
 // Update - PUT /users/:id (Admin only)
 func (h *UserHandler) Update(c *fiber.Ctx) error {
-	id, _ := strconv.Atoi(c.Params("id"))
+	id, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return utils.BadRequestResponse(c, "Invalid ID")
+	}
 
 	// หา user
 	var user models.User
@@ -225,7 +231,10 @@ func (h *UserHandler) Update(c *fiber.Ctx) error {
 
 // Delete - DELETE /users/:id (Admin only)
 func (h *UserHandler) Delete(c *fiber.Ctx) error {
-	id, _ := strconv.Atoi(c.Params("id"))
+	id, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return utils.BadRequestResponse(c, "Invalid ID")
+	}
 
 	// หา user
 	var user models.User

@@ -3,6 +3,7 @@ package services
 import (
 	"bytes"
 	"fmt"
+	"html"
 	"html/template"
 	"log"
 	"path/filepath"
@@ -205,7 +206,9 @@ func (s *EmailService) renderTemplate(templateName string, data map[string]inter
 
 // renderFallbackTemplate - สร้าง HTML อย่างง่ายถ้า template ไม่มี
 func (s *EmailService) renderFallbackTemplate(templateName string, data map[string]interface{}) string {
-	html := `
+	// Use "body" instead of "html" to avoid shadowing the html package import,
+	// which is needed for html.EscapeString to prevent XSS.
+	body := `
 <!DOCTYPE html>
 <html>
 <head>
@@ -222,19 +225,19 @@ func (s *EmailService) renderFallbackTemplate(templateName string, data map[stri
 <body>
     <div class="container">
         <div class="header">
-            <h1>🏫 SU Booking Room</h1>
+            <h1>SU Booking Room</h1>
         </div>
         <div class="content">
 `
-	// Add dynamic content
+	// Add dynamic content with HTML escaping to prevent XSS
 	if msg, ok := data["Message"].(string); ok {
-		html += fmt.Sprintf("<p>%s</p>", msg)
+		body += fmt.Sprintf("<p>%s</p>", html.EscapeString(msg))
 	}
 	if details, ok := data["Details"].(string); ok {
-		html += fmt.Sprintf("<div style='background: white; padding: 15px; border-left: 4px solid #4F46E5;'>%s</div>", details)
+		body += fmt.Sprintf("<div style='background: white; padding: 15px; border-left: 4px solid #4F46E5;'>%s</div>", html.EscapeString(details))
 	}
 
-	html += `
+	body += `
         </div>
         <div class="footer">
             <p>Silpakorn University - Computer Science Department</p>
@@ -244,7 +247,7 @@ func (s *EmailService) renderFallbackTemplate(templateName string, data map[stri
 </body>
 </html>
 `
-	return html
+	return body
 }
 
 // loadEmailTemplates - โหลด email templates ทั้งหมด

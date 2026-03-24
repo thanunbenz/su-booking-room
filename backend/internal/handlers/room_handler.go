@@ -30,7 +30,10 @@ func (h *RoomHandler) GetAll(c *fiber.Ctx) error {
 
 // GetByID - GET /rooms/:id
 func (h *RoomHandler) GetByID(c *fiber.Ctx) error {
-	id, _ := strconv.Atoi(c.Params("id"))
+	id, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return utils.BadRequestResponse(c, "Invalid ID")
+	}
 
 	var room models.Room
 	if err := h.DB.Preload("Building").First(&room, "room_id = ?", id).Error; err != nil {
@@ -45,7 +48,10 @@ func (h *RoomHandler) GetByID(c *fiber.Ctx) error {
 
 // GetByBuildingID - GET /buildings/:id/rooms
 func (h *RoomHandler) GetByBuildingID(c *fiber.Ctx) error {
-	buildingID, _ := strconv.Atoi(c.Params("id"))
+	buildingID, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return utils.BadRequestResponse(c, "Invalid ID")
+	}
 
 	// ตรวจสอบว่า building มีอยู่ไหม
 	var building models.Building
@@ -111,7 +117,10 @@ func (h *RoomHandler) Create(c *fiber.Ctx) error {
 
 // Update - PUT /rooms/:id
 func (h *RoomHandler) Update(c *fiber.Ctx) error {
-	id, _ := strconv.Atoi(c.Params("id"))
+	id, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return utils.BadRequestResponse(c, "Invalid ID")
+	}
 
 	// หา room
 	var room models.Room
@@ -181,7 +190,10 @@ func (h *RoomHandler) Update(c *fiber.Ctx) error {
 
 // Delete - DELETE /rooms/:id
 func (h *RoomHandler) Delete(c *fiber.Ctx) error {
-	id, _ := strconv.Atoi(c.Params("id"))
+	id, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return utils.BadRequestResponse(c, "Invalid ID")
+	}
 
 	result := h.DB.Delete(&models.Room{}, "room_id = ?", id)
 	if result.Error != nil {

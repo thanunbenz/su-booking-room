@@ -2,11 +2,25 @@ package utils
 
 import (
 	"errors"
+	"log"
 	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
+
+var jwtSecret []byte
+
+func init() {
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		log.Fatal("Required environment variable JWT_SECRET is not set")
+	}
+	if len(secret) < 32 {
+		log.Fatal("JWT_SECRET must be at least 32 characters long")
+	}
+	jwtSecret = []byte(secret)
+}
 
 func GenerateToken(UserID uint, roleID uint, fullName string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
@@ -17,7 +31,7 @@ func GenerateToken(UserID uint, roleID uint, fullName string) (string, error) {
 		"exp":        jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
 	})
 
-	t, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
+	t, err := token.SignedString(jwtSecret)
 	if err != nil {
 		return "", err
 	}
@@ -34,7 +48,7 @@ func GenerateRefreshToken(UserID uint, roleID uint, fullName string) (string, er
 		"exp":        jwt.NewNumericDate(time.Now().Add(168 * time.Hour)), // 7 days
 	})
 
-	t, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
+	t, err := token.SignedString(jwtSecret)
 	if err != nil {
 		return "", err
 	}
@@ -44,7 +58,7 @@ func GenerateRefreshToken(UserID uint, roleID uint, fullName string) (string, er
 
 func ValidateRefreshToken(tokenString string) (uint, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		return []byte(os.Getenv("JWT_SECRET")), nil
+		return jwtSecret, nil
 	})
 	if err != nil {
 		return 0, err
@@ -80,7 +94,7 @@ func VerifyToken(tokenString string) (bool, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("unexpected signing method")
 		}
-		return []byte(os.Getenv("JWT_SECRET")), nil
+		return jwtSecret, nil
 	})
 	if err != nil {
 		return false, err
@@ -96,7 +110,7 @@ func ExtractClaims(tokenString string) (*JWTClaims, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("unexpected signing method")
 		}
-		return []byte(os.Getenv("JWT_SECRET")), nil
+		return jwtSecret, nil
 	})
 	if err != nil {
 		return nil, err
