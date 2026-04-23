@@ -25,6 +25,9 @@ Complete documentation for SU Booking Room system.
 ### Features
 - [Notification System](features/notifications.md) - Email notifications
 - [Booking PDF Print](features/pdf-print.md) - Single + batch PDF generation (door notice / report)
+- [Multi-Day Booking](features/multi-day-booking.md) - Consecutive-day bookings with range conflict detection
+- [Admin Booking on Behalf](features/admin-on-behalf.md) - Admins create bookings for other users
+- [Calendar View](features/calendar-view.md) - Month grid of all bookings
 
 ### API
 - [API Overview](api/README.md) - API documentation

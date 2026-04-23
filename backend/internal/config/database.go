@@ -77,6 +77,25 @@ func AutoMigrate() error {
 		return err
 	}
 
+	// Manual migration for Booking.EndDate (multi-day support):
+	// AutoMigrate cannot add a NOT NULL column to an existing table that has
+	// rows. We add the column nullable, backfill from booking_date, then
+	// enforce NOT NULL — all inside a block guarded by column existence so
+	// it is idempotent across restarts.
+	if err := DB.Exec(`DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'bookings' AND column_name = 'end_date'
+  ) THEN
+    ALTER TABLE bookings ADD COLUMN end_date DATE;
+    UPDATE bookings SET end_date = booking_date WHERE end_date IS NULL;
+    ALTER TABLE bookings ALTER COLUMN end_date SET NOT NULL;
+  END IF;
+END $$;`).Error; err != nil {
+		return fmt.Errorf("backfill end_date: %w", err)
+	}
+
 	if err := DB.AutoMigrate(&models.Booking{}); err != nil {
 		return err
 	}

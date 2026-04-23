@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/thanunbenz/su-booking-room/internal/models"
+	"github.com/thanunbenz/su-booking-room/internal/utils"
 	"gorm.io/gorm"
 )
 
@@ -35,7 +36,7 @@ func (s *NotificationService) NotifyBookingCreated(bookingID int) error {
 	// สร้าง notification message
 	message := fmt.Sprintf("การจองห้อง %s ในวันที่ %s เวลา %s-%s ได้รับการบันทึกเรียบร้อยแล้ว",
 		booking.Room.Name,
-		booking.BookingDate.Time.Format("02/01/2006"),
+		utils.FormatDateRange(booking.BookingDate.Time, booking.EndDate.Time),
 		booking.StartTime,
 		booking.EndTime,
 	)
@@ -68,7 +69,7 @@ func (s *NotificationService) NotifyBookingApproved(bookingID int) error {
 
 	message := fmt.Sprintf("การจองห้อง %s ในวันที่ %s ได้รับการอนุมัติแล้ว",
 		booking.Room.Name,
-		booking.BookingDate.Time.Format("02/01/2006"),
+		utils.FormatDateRange(booking.BookingDate.Time, booking.EndDate.Time),
 	)
 
 	notificationID, err := s.createNotification(booking.UserID, bookingID, "booking_approved", message)
@@ -90,7 +91,7 @@ func (s *NotificationService) NotifyBookingRejected(bookingID int, reason string
 
 	message := fmt.Sprintf("การจองห้อง %s ในวันที่ %s ถูกปฏิเสธ",
 		booking.Room.Name,
-		booking.BookingDate.Time.Format("02/01/2006"),
+		utils.FormatDateRange(booking.BookingDate.Time, booking.EndDate.Time),
 	)
 	if reason != "" {
 		message += fmt.Sprintf(" - เหตุผล: %s", reason)
@@ -115,7 +116,7 @@ func (s *NotificationService) NotifyBookingCancelled(bookingID int, reason strin
 
 	message := fmt.Sprintf("การจองห้อง %s ในวันที่ %s ถูกยกเลิกแล้ว",
 		booking.Room.Name,
-		booking.BookingDate.Time.Format("02/01/2006"),
+		utils.FormatDateRange(booking.BookingDate.Time, booking.EndDate.Time),
 	)
 	if reason != "" {
 		message += fmt.Sprintf(" - %s", reason)
@@ -247,7 +248,7 @@ func (s *NotificationService) prepareEmailData(booking *models.Booking) map[stri
 		"RoomName":          roomName,
 		"BuildingName":      buildingName,
 		"Title":             booking.Title,
-		"BookingDate":       booking.BookingDate.Time.Format("02 January 2006"),
+		"BookingDate":       utils.FormatDateRange(booking.BookingDate.Time, booking.EndDate.Time),
 		"StartTime":         booking.StartTime,
 		"EndTime":           booking.EndTime,
 		"Status":            booking.Status,

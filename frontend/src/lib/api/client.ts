@@ -23,6 +23,7 @@ import type {
   Booking,
   CreateBookingRequest,
   UpdateBookingStatusRequest,
+  PublicCalendarBooking,
   CreateUserRequest,
   UpdateUserRequest,
   CreateRoleRequest,
@@ -325,14 +326,44 @@ export const bookingApi = {
     status?: string
     room_id?: number
     booking_date?: string
+    from?: string // YYYY-MM-DD — calendar range query (admin)
+    to?: string   // YYYY-MM-DD
   }): Promise<ApiResponse<Booking[]>> => {
     const queryParams = new URLSearchParams()
     if (params?.status) queryParams.append('status', params.status)
     if (params?.room_id) queryParams.append('room_id', params.room_id.toString())
     if (params?.booking_date) queryParams.append('booking_date', params.booking_date)
+    if (params?.from) queryParams.append('from', params.from)
+    if (params?.to) queryParams.append('to', params.to)
 
     const query = queryParams.toString()
     return apiCall(`/bookings${query ? `?${query}` : ''}`)
+  },
+
+  /**
+   * Public calendar — no auth, returns only approved bookings with user data stripped.
+   * Safe for unauthenticated visitors.
+   */
+  getPublicCalendar: async (params?: {
+    from?: string
+    to?: string
+    room_id?: number
+  }): Promise<ApiResponse<PublicCalendarBooking[]>> => {
+    const qp = new URLSearchParams()
+    if (params?.from) qp.append('from', params.from)
+    if (params?.to) qp.append('to', params.to)
+    if (params?.room_id) qp.append('room_id', params.room_id.toString())
+    const q = qp.toString()
+    const res = await fetch(
+      `${API_BASE_URL}/bookings/public-calendar${q ? '?' + q : ''}`
+    )
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        error: { code: 'HTTP_' + res.status, message: res.statusText },
+      }))
+      throw err as ApiError
+    }
+    return res.json()
   },
 
   /**

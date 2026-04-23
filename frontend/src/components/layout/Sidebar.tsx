@@ -1,7 +1,7 @@
 'use client';
 
 import { FaHome, FaBook, FaTimes, FaBuilding, FaUsers } from 'react-icons/fa';
-import { TbDoor, TbCalendar } from 'react-icons/tb';
+import { TbDoor, TbCalendar, TbCalendarMonth } from 'react-icons/tb';
 import { MdAdminPanelSettings } from 'react-icons/md';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
@@ -68,6 +68,16 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             <span>รายการจองของฉัน</span>
           </Link>
         )}
+
+        {/* Calendar view - public (no auth required) */}
+        <Link
+          href="/calendar"
+          className="flex items-center gap-3 px-4 py-3 text-white hover:bg-teal-600 dark:hover:bg-teal-700 rounded-lg transition-colors font-medium"
+          onClick={onClose}
+        >
+          <TbCalendarMonth className="text-lg" />
+          <span>ปฏิทิน</span>
+        </Link>
 
         {/* Admin Section */}
         {isAuthenticated && isAdmin && (

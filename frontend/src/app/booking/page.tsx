@@ -4,14 +4,18 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { withRole } from '@/lib/withRole';
 import MainLayout from '@/components/layout/MainLayout';
-import { bookingApi, buildingApi, roomApi, scheduleApi } from '@/lib/api/client';
-import { Building, Room, Booking, FixedSchedule } from '@/lib/api/types';
-import { TbCalendar, TbClock, TbMapPin, TbFileText, TbTool, TbAlertCircle } from 'react-icons/tb';
+import { bookingApi, buildingApi, roomApi, scheduleApi, userApi } from '@/lib/api/client';
+import { Building, Room, Booking, FixedSchedule, User } from '@/lib/api/types';
+import { TbCalendar, TbClock, TbMapPin, TbFileText, TbTool, TbAlertCircle, TbUser } from 'react-icons/tb';
+import { useAuth } from '@/contexts/AuthContext';
 
 function BookingPage() {
   const router = useRouter();
+  const { user } = useAuth();
+  const isAdmin = user?.role?.role_name === 'admin';
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
+  const [users, setUsers] = useState<User[]>([]); // admin-only — for booking on behalf
   const [selectedBuildingId, setSelectedBuildingId] = useState<number>(0);
   const [filteredRooms, setFilteredRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(false);
@@ -29,8 +33,10 @@ function BookingPage() {
     detail: '',
     equipment_request: '',
     booking_date: '',
+    end_date: '', // empty = same as booking_date (single-day)
     start_time: '09:00',
     end_time: '10:00',
+    user_id: 0, // admin-only — 0 means "me"
   });
 
   useEffect(() => {
@@ -93,6 +99,16 @@ function BookingPage() {
       setBuildings(buildingsRes.data);
       setRooms(roomsRes.data);
       setFilteredRooms(roomsRes.data);
+
+      // Admins may book on behalf of another user — preload the user list
+      if (isAdmin) {
+        try {
+          const usersRes = await userApi.getAll();
+          setUsers(usersRes.data);
+        } catch (uErr) {
+          console.error('Failed to load users for admin booking:', uErr);
+        }
+      }
     } catch (err: unknown) {
       setError('ไม่สามารถโหลดข้อมูลได้');
       console.error('Error fetching data:', err);
@@ -105,8 +121,8 @@ function BookingPage() {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    // Convert room_id to number
-    const parsedValue = name === 'room_id' ? Number(value) : value;
+    // Convert numeric fields
+    const parsedValue = name === 'room_id' || name === 'user_id' ? Number(value) : value;
     setFormData({ ...formData, [name]: parsedValue });
     setError('');
     setSuccess('');
@@ -142,6 +158,20 @@ function BookingPage() {
       return;
     }
 
+    // Multi-day: validate end_date if provided
+    const effectiveEndDate = formData.end_date || formData.booking_date;
+    const endDateObj = new Date(effectiveEndDate);
+    endDateObj.setHours(0, 0, 0, 0);
+    if (endDateObj < bookingDate) {
+      setError('วันสิ้นสุดต้องไม่น้อยกว่าวันเริ่ม');
+      return;
+    }
+    const rangeDays = Math.round((endDateObj.getTime() - bookingDate.getTime()) / 86400000) + 1;
+    if (rangeDays > 30) {
+      setError('ช่วงวันที่จองยาวเกิน 30 วัน');
+      return;
+    }
+
     if (formData.start_time >= formData.end_time) {
       setError('เวลาเริ่มต้องน้อยกว่าเวลาสิ้นสุด');
       return;
@@ -155,8 +185,11 @@ function BookingPage() {
         detail: formData.detail.trim(),
         equipment_request: formData.equipment_request.trim(),
         booking_date: formData.booking_date,
+        end_date: effectiveEndDate,
         start_time: formData.start_time,
         end_time: formData.end_time,
+        // Only pass user_id if admin picked someone else; backend ignores it otherwise
+        ...(isAdmin && formData.user_id > 0 ? { user_id: formData.user_id } : {}),
       });
 
       // setSuccess('สร้างการจองสำเร็จ! รอการอนุมัติจากแอดมิน');
@@ -168,8 +201,10 @@ function BookingPage() {
         detail: '',
         equipment_request: '',
         booking_date: '',
+        end_date: '',
         start_time: '09:00',
         end_time: '10:00',
+        user_id: 0,
       });
       setSelectedBuildingId(0);
 
@@ -348,21 +383,67 @@ function BookingPage() {
             />
           </div>
 
-          {/* Date */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              <TbCalendar className="inline w-4 h-4 mr-1" />
-              วันที่ <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="date"
-              name="booking_date"
-              value={formData.booking_date}
-              onChange={handleInputChange}
-              min={new Date().toISOString().split('T')[0]}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              required
-            />
+          {/* Admin-only: book on behalf of another user */}
+          {isAdmin && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <TbUser className="inline w-4 h-4 mr-1" />
+                จองในนามของ
+                <span className="text-xs text-gray-400 ml-2">(Admin เท่านั้น — ไม่เลือก = จองในนามตัวเอง)</span>
+              </label>
+              <select
+                name="user_id"
+                value={formData.user_id}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              >
+                <option value={0}>— จองในนามตัวเอง —</option>
+                {users.map((u) => (
+                  <option key={u.user_id} value={u.user_id}>
+                    {u.fullname} ({u.email})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Date range — end_date is optional; leave empty for single-day */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <TbCalendar className="inline w-4 h-4 mr-1" />
+                วันที่เริ่ม <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                name="booking_date"
+                value={formData.booking_date}
+                onChange={handleInputChange}
+                min={new Date().toISOString().split('T')[0]}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <TbCalendar className="inline w-4 h-4 mr-1" />
+                วันสิ้นสุด
+                <span className="text-xs text-gray-400 ml-2">(ไม่ใส่ = จองวันเดียว)</span>
+              </label>
+              <input
+                type="date"
+                name="end_date"
+                value={formData.end_date}
+                onChange={handleInputChange}
+                min={formData.booking_date || new Date().toISOString().split('T')[0]}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              />
+              {formData.booking_date && formData.end_date && formData.end_date !== formData.booking_date && (
+                <p className="text-xs text-teal-700 dark:text-teal-400 mt-1">
+                  จอง {Math.max(1, Math.round((new Date(formData.end_date).getTime() - new Date(formData.booking_date).getTime()) / 86400000) + 1)} วัน (เวลาเดียวกันทุกวัน)
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Time */}

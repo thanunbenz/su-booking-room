@@ -138,7 +138,8 @@ export interface Booking {
   title: string
   detail: string
   equipment_request: string
-  booking_date: string // YYYY-MM-DD
+  booking_date: string // YYYY-MM-DD — วันเริ่มจอง
+  end_date: string // YYYY-MM-DD — วันสิ้นสุด (inclusive); เท่ากับ booking_date ถ้าจองวันเดียว
   start_time: string // HH:MM
   end_time: string // HH:MM
   status: BookingStatus
@@ -155,13 +156,29 @@ export interface CreateBookingRequest {
   detail?: string
   equipment_request?: string
   booking_date: string // YYYY-MM-DD
+  end_date?: string // YYYY-MM-DD — omit or equal booking_date for single-day
   start_time: string // HH:MM
   end_time: string // HH:MM
+  user_id?: number // Admin only — จองแทนผู้ใช้คนอื่น
 }
 
 export interface UpdateBookingStatusRequest {
   status: BookingStatus
   status_note?: string
+}
+
+/** Sanitized booking shape returned from /bookings/public-calendar (no user PII). */
+export interface PublicCalendarBooking {
+  booking_id: number
+  room_id: number
+  room_name: string
+  building_id: number
+  title: string
+  booking_date: string // YYYY-MM-DD
+  end_date: string
+  start_time: string
+  end_time: string
+  status: BookingStatus
 }
 
 // === User Management Types ===

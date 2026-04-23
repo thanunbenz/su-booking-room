@@ -67,9 +67,10 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, notifService *services.Notificatio
 	// Booking routes - organized by specificity (specific routes before parameterized ones)
 	bookings := api.Group("/bookings")
 	// GET routes - ordered for proper query parameter handling
-	bookings.Get("/my", middleware.AuthMiddleware, bookingHandler.GetMyBookings)                                // User - ดูการจองของตัวเอง
-	bookings.Get("/",  bookingHandler.GetAll)                   // Admin only - ดูการจองทั้งหมด (supports ?status=, ?room_id=, ?booking_date= query params)
-	bookings.Get("/:id", middleware.AuthMiddleware, bookingHandler.GetByID)                                     // User/Admin - ดูการจองตาม ID
+	bookings.Get("/public-calendar", bookingHandler.GetPublicCalendar)                                                   // Public - ปฏิทินการจอง (sanitized, approved only)
+	bookings.Get("/my", middleware.AuthMiddleware, bookingHandler.GetMyBookings)                                         // User - ดูการจองของตัวเอง
+	bookings.Get("/", middleware.AuthMiddleware, middleware.AdminOnly, bookingHandler.GetAll)                            // Admin only - ดูการจองทั้งหมด (supports ?status=, ?room_id=, ?booking_date=, ?from=, ?to=)
+	bookings.Get("/:id", middleware.AuthMiddleware, bookingHandler.GetByID)                                              // User/Admin - ดูการจองตาม ID
 	bookings.Get("/:id/pdf", middleware.AuthMiddleware, middleware.AdminOnly, middleware.PDFRateLimiter, bookingHandler.DownloadPDF) // Admin only - ดาวน์โหลดใบยืนยันการจองเป็น PDF (rate limited)
 
 	// POST routes

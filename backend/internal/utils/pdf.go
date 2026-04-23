@@ -88,9 +88,47 @@ func formatThaiShortDate(t time.Time) string {
 	)
 }
 
+// FormatDateRange is the exported form of formatDateCell — used by callers
+// outside this package (e.g. email templates) to render a Thai date or
+// date range in a compact format.
+func FormatDateRange(start, end time.Time) string {
+	return formatDateCell(start, end)
+}
+
+// formatDateCell renders a compact date (or date range) for tabular cells.
+// Single day: "12 ก.พ. 2568". Same month: "12-14 ก.พ. 2568". Cross-month:
+// "28 ก.พ. - 2 มี.ค. 2568". Cross-year: "28 ธ.ค. 2568 - 2 ม.ค. 2569".
+func formatDateCell(start, end time.Time) string {
+	if end.IsZero() || end.Equal(start) {
+		return formatThaiShortDate(start)
+	}
+	sY, sM, sD := start.Year()+543, int(start.Month()), start.Day()
+	eY, eM, eD := end.Year()+543, int(end.Month()), end.Day()
+	if sY == eY && sM == eM {
+		return fmt.Sprintf("%d-%d %s %d", sD, eD, thaiMonthsShort[sM-1], sY)
+	}
+	if sY == eY {
+		return fmt.Sprintf("%d %s - %d %s %d",
+			sD, thaiMonthsShort[sM-1], eD, thaiMonthsShort[eM-1], sY)
+	}
+	return fmt.Sprintf("%d %s %d - %d %s %d",
+		sD, thaiMonthsShort[sM-1], sY, eD, thaiMonthsShort[eM-1], eY)
+}
+
 // formatThaiTimeRange returns "08.30 - 16.30 น." from HH:MM:SS inputs.
 func formatThaiTimeRange(start, end string) string {
 	return fmt.Sprintf("%s - %s น.", dotTime(start), dotTime(end))
+}
+
+// daysBetweenInclusive counts the number of calendar days between two dates,
+// inclusive of both endpoints. Same day returns 1.
+func daysBetweenInclusive(start, end time.Time) int {
+	s := start.Truncate(24 * time.Hour)
+	e := end.Truncate(24 * time.Hour)
+	if e.Before(s) {
+		return 0
+	}
+	return int(e.Sub(s).Hours()/24) + 1
 }
 
 // dotTime converts "HH:MM[:SS]" to "HH.MM".
@@ -148,12 +186,44 @@ func drawNoticePage(pdf *gofpdf.Fpdf, b *models.Booking, showFooter bool) {
 
 	pdf.Ln(10)
 
-	// Date + time
-	pdf.SetFont("NotoThai", "", 22)
-	pdf.SetTextColor(17, 24, 39)
-	dateStr := formatThaiFullDate(b.BookingDate.Time)
+	// Date + time — single-day shows one line, multi-day shows one line per day
+	// (matches the university's existing paper notice style).
 	timeStr := formatThaiTimeRange(b.StartTime, b.EndTime)
-	pdf.CellFormat(0, 12, dateStr+"   เวลา "+timeStr, "", 1, "C", false, 0, "")
+	endDate := b.EndDate.Time
+	if endDate.IsZero() {
+		endDate = b.BookingDate.Time
+	}
+	days := daysBetweenInclusive(b.BookingDate.Time, endDate)
+
+	// Shrink font slightly when many days must fit on one page.
+	dateFontSize := 22.0
+	dateLineH := 12.0
+	switch {
+	case days > 7:
+		dateFontSize = 14
+		dateLineH = 8
+	case days > 3:
+		dateFontSize = 18
+		dateLineH = 10
+	}
+	pdf.SetFont("NotoThai", "", dateFontSize)
+	pdf.SetTextColor(17, 24, 39)
+	const maxListedDays = 10
+	shown := 0
+	for d := b.BookingDate.Time; !d.After(endDate); d = d.AddDate(0, 0, 1) {
+		if shown >= maxListedDays {
+			remaining := days - shown
+			pdf.SetFont("NotoThai", "", dateFontSize*0.8)
+			pdf.SetTextColor(107, 114, 128)
+			pdf.CellFormat(0, dateLineH,
+				fmt.Sprintf("... และอีก %d วัน", remaining),
+				"", 1, "C", false, 0, "")
+			break
+		}
+		line := formatThaiFullDate(d) + "   เวลา " + timeStr
+		pdf.CellFormat(0, dateLineH, line, "", 1, "C", false, 0, "")
+		shown++
+	}
 
 	// Booker
 	pdf.Ln(4)
@@ -221,7 +291,7 @@ func drawReportTableRows(pdf *gofpdf.Fpdf, bookings []models.Booking) {
 		cells := []string{
 			fmt.Sprintf("%d", i+1),
 			fmt.Sprintf("BK-%06d", b.BookingID),
-			formatThaiShortDate(b.BookingDate.Time),
+			formatDateCell(b.BookingDate.Time, b.EndDate.Time),
 			fmt.Sprintf("%s-%s", dotTime(b.StartTime), dotTime(b.EndTime)),
 			b.Room.Name,
 			truncate(b.Title, 26),

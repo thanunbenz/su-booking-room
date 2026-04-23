@@ -11,6 +11,7 @@ import { TbCalendar, TbClock, TbMapPin, TbFileText, TbX, TbEye, TbUser, TbPrinte
 import { HiOutlineOfficeBuilding } from 'react-icons/hi';
 import { useAuth } from '@/contexts/AuthContext';
 import { downloadBookingPDF } from '@/lib/downloadBookingPDF';
+import { formatThaiDateRange } from '@/lib/formatDate';
 
 function MyBookingsPage() {
   const router = useRouter();
@@ -255,7 +256,7 @@ function MyBookingsPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <TbCalendar className="text-green-600 dark:text-green-400 text-lg" />
-                        <span className="text-sm"><span className="font-semibold">วันที่:</span> {formatDate(booking.booking_date)}</span>
+                        <span className="text-sm"><span className="font-semibold">วันที่:</span> {formatThaiDateRange(booking.booking_date, booking.end_date)}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <TbClock className="text-pink-600 dark:text-pink-400 text-lg" />

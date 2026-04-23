@@ -10,6 +10,7 @@ import { bookingApi } from '@/lib/api/client';
 import type { Booking } from '@/lib/api/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { downloadBookingPDF } from '@/lib/downloadBookingPDF';
+import { formatThaiDateRange } from '@/lib/formatDate';
 
 export default function BookingDetailPage() {
     const params = useParams();
@@ -224,7 +225,7 @@ export default function BookingDetailPage() {
                                 <div className="flex-1">
                                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">วันที่จอง</p>
                                     <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                                        {formatDate(booking.booking_date)}
+                                        {formatThaiDateRange(booking.booking_date, booking.end_date)}
                                     </p>
                                 </div>
                             </div>

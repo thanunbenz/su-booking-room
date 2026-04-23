@@ -89,9 +89,10 @@ type Booking struct {
 	Title            string     `gorm:"type:varchar(255);not null" json:"title" validate:"required,min=1,max=255"`
 	Detail           string     `gorm:"type:text" json:"detail" validate:"omitempty,max=5000"`
 	EquipmentRequest string     `gorm:"type:text" json:"equipment_request" validate:"omitempty,max=5000"` // เช่น: คอมพิวเตอร์ 20 เครื่อง, โปรเจคเตอร์ 1 เครื่อง
-	BookingDate      CustomDate `gorm:"type:date;not null;index:idx_room_date_time" json:"booking_date" validate:"required"`
-	StartTime        string     `gorm:"type:time;not null;index:idx_room_date_time" json:"start_time" validate:"required"`
-	EndTime          string     `gorm:"type:time;not null" json:"end_time" validate:"required"`
+	BookingDate      CustomDate `gorm:"type:date;not null;index:idx_room_date_time" json:"booking_date" validate:"required"` // วันที่เริ่มจอง
+	EndDate          CustomDate `gorm:"type:date;not null;index" json:"end_date" validate:"required"`                        // วันสิ้นสุด (inclusive); จองวันเดียวให้เท่ากับ booking_date
+	StartTime        string     `gorm:"type:time;not null;index:idx_room_date_time" json:"start_time" validate:"required"`   // เวลาเริ่ม (ใช้กับทุกวันในช่วง)
+	EndTime          string     `gorm:"type:time;not null" json:"end_time" validate:"required"`                              // เวลาสิ้นสุด (ใช้กับทุกวันในช่วง)
 	Status           string     `gorm:"type:varchar(20);not null;default:'approved';index" json:"status" validate:"omitempty,oneof=pending approved rejected cancelled completed"`
 	StatusNote       string     `gorm:"type:text" json:"status_note" validate:"omitempty,max=1000"` // เหตุผลการยกเลิก/ปฏิเสธ หรือหมายเหตุอื่นๆ
 	CreatedAt        time.Time  `gorm:"default:now()" json:"created_at"`

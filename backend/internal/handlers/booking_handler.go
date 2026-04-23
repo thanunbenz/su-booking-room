@@ -48,22 +48,104 @@ func (h *BookingHandler) GetAll(c *fiber.Ctx) error {
 		query = query.Where("room_id = ?", roomID)
 	}
 
-	// Filter by date
+	// Filter by exact date (single day)
 	if date := c.Query("booking_date"); date != "" {
-        parsedDate, err := time.Parse("2006-01-02", date)
-        if err != nil {
-            return utils.BadRequestResponse(c, "Invalid date format. Use YYYY-MM-DD")
-        }
-        // Query โดยเปรียบเทียบแค่วันที่ (ไม่รวมเวลา)
-		print("asdas")
-        query = query.Where("DATE(booking_date) = ?", parsedDate.Format("2006-01-02"))
-    }
+		parsedDate, err := time.Parse("2006-01-02", date)
+		if err != nil {
+			return utils.BadRequestResponse(c, "Invalid date format. Use YYYY-MM-DD")
+		}
+		// Match any booking whose range contains this date (multi-day aware)
+		query = query.Where("booking_date <= ? AND end_date >= ?",
+			parsedDate.Format("2006-01-02"), parsedDate.Format("2006-01-02"))
+	}
+
+	// Filter by date range (overlaps [from, to]) — used by the calendar view
+	if from := c.Query("from"); from != "" {
+		if _, err := time.Parse("2006-01-02", from); err != nil {
+			return utils.BadRequestResponse(c, "Invalid 'from' format. Use YYYY-MM-DD")
+		}
+		query = query.Where("end_date >= ?", from)
+	}
+	if to := c.Query("to"); to != "" {
+		if _, err := time.Parse("2006-01-02", to); err != nil {
+			return utils.BadRequestResponse(c, "Invalid 'to' format. Use YYYY-MM-DD")
+		}
+		query = query.Where("booking_date <= ?", to)
+	}
 
 	if err := query.Find(&bookings).Error; err != nil {
 		return utils.InternalServerErrorResponse(c, err.Error())
 	}
 
 	return utils.StandardResponse(c, fiber.StatusOK, bookings, "Success")
+}
+
+// PublicCalendarBooking is the sanitized shape returned to unauthenticated
+// viewers of the calendar. It omits user PII (name/email) and booking detail
+// fields that could leak organizational information. Only approved bookings
+// are ever returned.
+type PublicCalendarBooking struct {
+	BookingID   int               `json:"booking_id"`
+	RoomID      int               `json:"room_id"`
+	RoomName    string            `json:"room_name"`
+	BuildingID  int               `json:"building_id"`
+	Title       string            `json:"title"`
+	BookingDate models.CustomDate `json:"booking_date"`
+	EndDate     models.CustomDate `json:"end_date"`
+	StartTime   string            `json:"start_time"`
+	EndTime     string            `json:"end_time"`
+	Status      string            `json:"status"`
+}
+
+// GetPublicCalendar - GET /bookings/public-calendar (Public - ไม่ต้อง login)
+// คืนค่าเฉพาะการจองที่อนุมัติแล้ว พร้อม sanitize ข้อมูลผู้ใช้ออก
+// เพื่อให้คนนอกระบบดูปฏิทินการใช้ห้องได้โดยไม่เปิดเผยข้อมูลผู้ใช้
+func (h *BookingHandler) GetPublicCalendar(c *fiber.Ctx) error {
+	query := h.DB.Model(&models.Booking{}).
+		Preload("Room.Building").
+		Where("status = ?", "approved").
+		Order("booking_date ASC, start_time ASC")
+
+	if from := c.Query("from"); from != "" {
+		if _, err := time.Parse("2006-01-02", from); err != nil {
+			return utils.BadRequestResponse(c, "Invalid 'from' format. Use YYYY-MM-DD")
+		}
+		query = query.Where("end_date >= ?", from)
+	}
+	if to := c.Query("to"); to != "" {
+		if _, err := time.Parse("2006-01-02", to); err != nil {
+			return utils.BadRequestResponse(c, "Invalid 'to' format. Use YYYY-MM-DD")
+		}
+		query = query.Where("booking_date <= ?", to)
+	}
+	if roomID := c.Query("room_id"); roomID != "" {
+		query = query.Where("room_id = ?", roomID)
+	}
+
+	var bookings []models.Booking
+	if err := query.Find(&bookings).Error; err != nil {
+		return utils.InternalServerErrorResponse(c, err.Error())
+	}
+
+	// Project to the sanitized DTO — drops UserID, User, Detail, EquipmentRequest,
+	// StatusNote so nothing user-identifying leaks.
+	out := make([]PublicCalendarBooking, 0, len(bookings))
+	for _, b := range bookings {
+		out = append(out, PublicCalendarBooking{
+			BookingID:   b.BookingID,
+			RoomID:      b.RoomID,
+			RoomName:    b.Room.Name,
+			BuildingID:  b.Room.BuildingID,
+			Title:       b.Title,
+			BookingDate: b.BookingDate,
+			EndDate:     b.EndDate,
+			StartTime:   b.StartTime,
+			EndTime:     b.EndTime,
+			Status:      b.Status,
+		})
+	}
+
+	return utils.StandardResponse(c, fiber.StatusOK, out, "Success")
 }
 
 // GetByRoomAndDate - GET /bookings/room/:room_id/availability (ดูการจองของห้องตามวันที่ - สำหรับตรวจสอบความว่าง)
@@ -130,24 +212,39 @@ func (h *BookingHandler) GetByID(c *fiber.Ctx) error {
 func (h *BookingHandler) Create(c *fiber.Ctx) error {
 	var input models.Booking
 
-	fmt.Println("📥 Raw request body:", string(c.Body()))
-
 	// Parse body
 	if err := c.BodyParser(&input); err != nil {
-		fmt.Println("❌ Body parsing failed. Error:", err.Error())
 		return utils.BadRequestResponse(c, "Invalid request body")
 	}
 
-	fmt.Printf("✅ Parsed: RoomID=%d, Title='%s', Date=%v (IsZero=%v), Start='%s', End='%s'\n",
-		input.RoomID, input.Title, input.BookingDate.Time, input.BookingDate.IsZero(), input.StartTime, input.EndTime)
-
 	// ดึง userID จาก JWT token
 	userID := c.Locals("user_id").(uint)
-	input.UserID = int(userID)
+	roleID, _ := c.Locals("role_id").(uint)
+	isAdmin := roleID == 1
+
+	// Admin จองแทนผู้อื่นได้: ถ้า body ส่ง user_id มา และเป็น admin → ใช้ค่าจาก body
+	// ผู้ใช้ทั่วไปจะโดน override เป็น JWT user เสมอ (ป้องกันการปลอมตัว)
+	if isAdmin && input.UserID > 0 {
+		// ตรวจสอบว่ามี user นี้อยู่จริง
+		var targetUser models.User
+		if err := h.DB.First(&targetUser, "user_id = ?", input.UserID).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return utils.BadRequestResponse(c, "ผู้ใช้ที่ระบุไม่พบในระบบ")
+			}
+			return utils.InternalServerErrorResponse(c, err.Error())
+		}
+	} else {
+		input.UserID = int(userID)
+	}
+
+	// Default end_date to booking_date when the client omits it (single-day booking).
+	// Must run BEFORE ValidateStruct because EndDate has `validate:"required"`.
+	if input.EndDate.Time.IsZero() {
+		input.EndDate = input.BookingDate
+	}
 
 	// Validate struct using validator
 	if validationErrors := utils.ValidateStruct(input); validationErrors != nil {
-		fmt.Printf("❌ Validation failed: %+v\n", validationErrors)
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
 			"error": fiber.Map{
@@ -157,23 +254,27 @@ func (h *BookingHandler) Create(c *fiber.Ctx) error {
 			},
 		})
 	}
-	fmt.Println("✅ All required fields validated")
 
 	// Validate start_time < end_time
 	if input.StartTime >= input.EndTime {
-		fmt.Printf("❌ Time validation failed: start=%s, end=%s\n", input.StartTime, input.EndTime)
 		return utils.BadRequestResponse(c, "Start time must be before end time")
 	}
-	fmt.Println("✅ Time range is valid")
 
-	// Validate booking date is not in the past (compare in UTC to avoid timezone issues)
+	// Validate booking date range
 	today := time.Now().UTC().Truncate(24 * time.Hour)
 	bookingDate := input.BookingDate.Time.UTC().Truncate(24 * time.Hour)
+	endDate := input.EndDate.Time.UTC().Truncate(24 * time.Hour)
 	if bookingDate.Before(today) {
-		fmt.Printf("❌ Date validation failed: bookingDate=%v, today=%v\n", bookingDate, today)
 		return utils.BadRequestResponse(c, "Cannot book in the past")
 	}
-	fmt.Println("✅ Date is valid (not in the past)")
+	if endDate.Before(bookingDate) {
+		return utils.BadRequestResponse(c, "end_date ต้องไม่น้อยกว่า booking_date")
+	}
+	const maxRangeDays = 30
+	if endDate.Sub(bookingDate).Hours()/24 > maxRangeDays {
+		return utils.BadRequestResponse(c,
+			fmt.Sprintf("ช่วงวันที่จองยาวเกิน %d วัน", maxRangeDays))
+	}
 
 	// ตรวจสอบว่าห้องมีอยู่จริง
 	var room models.Room
@@ -185,10 +286,12 @@ func (h *BookingHandler) Create(c *fiber.Ctx) error {
 	}
 
 	// ตรวจสอบว่าเวลาไม่ซ้อนทับกับการจองอื่น (เฉพาะที่ approved หรือ pending)
-	// Time overlap logic: existing.start_time < new.end_time AND existing.end_time > new.start_time
+	// Range overlap: (a.booking_date <= b.end_date) AND (a.end_date >= b.booking_date)
+	// Time overlap:  a.start_time < b.end_time AND a.end_time > b.start_time
 	var conflictCount int64
 	h.DB.Model(&models.Booking{}).
-		Where("room_id = ? AND booking_date = ? AND status IN (?, ?)", input.RoomID, input.BookingDate.Time, "pending", "approved").
+		Where("room_id = ? AND status IN (?, ?)", input.RoomID, "pending", "approved").
+		Where("booking_date <= ? AND end_date >= ?", input.EndDate.Time, input.BookingDate.Time).
 		Where("start_time < ? AND end_time > ?", input.EndTime, input.StartTime).
 		Count(&conflictCount)
 
@@ -196,20 +299,21 @@ func (h *BookingHandler) Create(c *fiber.Ctx) error {
 		return utils.ConflictResponse(c, "Time slot is already booked")
 	}
 
-	// ตรวจสอบว่าเวลาไม่ซ้อนกับตารางการจอง
-	dayOfWeek := int(input.BookingDate.Time.Weekday())
-	if dayOfWeek == 0 {
-		dayOfWeek = 7 // Sunday = 7
-	}
-
-	var scheduleConflictCount int64
-	h.DB.Model(&models.FixedSchedule{}).
-		Where("room_id = ? AND day_of_week = ?", input.RoomID, dayOfWeek).
-		Where("start_time < ? AND end_time > ?", input.EndTime, input.StartTime).
-		Count(&scheduleConflictCount)
-
-	if scheduleConflictCount > 0 {
-		return utils.ConflictResponse(c, "Time slot conflicts with fixed schedule")
+	// ตรวจสอบว่าเวลาไม่ซ้อนกับตารางการจอง (fixed schedule) — เช็คทุกวันในช่วง
+	for d := input.BookingDate.Time; !d.After(input.EndDate.Time); d = d.AddDate(0, 0, 1) {
+		dayOfWeek := int(d.Weekday())
+		if dayOfWeek == 0 {
+			dayOfWeek = 7 // Sunday = 7
+		}
+		var scheduleConflictCount int64
+		h.DB.Model(&models.FixedSchedule{}).
+			Where("room_id = ? AND day_of_week = ?", input.RoomID, dayOfWeek).
+			Where("start_time < ? AND end_time > ?", input.EndTime, input.StartTime).
+			Count(&scheduleConflictCount)
+		if scheduleConflictCount > 0 {
+			return utils.ConflictResponse(c,
+				fmt.Sprintf("วันที่ %s ซ้อนกับตารางประจำของห้อง", d.Format("2006-01-02")))
+		}
 	}
 
 	// Set default status
