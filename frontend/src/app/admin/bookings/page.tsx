@@ -6,8 +6,14 @@ import MainLayout from '@/components/layout/MainLayout';
 import Link from 'next/link';
 import { bookingApi, roomApi, buildingApi } from '@/lib/api/client';
 import { Booking, Room, Building, User, BookingStatus } from '@/lib/api/types';
-import { TbCalendar, TbCheck, TbX, TbTrash, TbUser, TbFilter, TbEye, TbClock, TbMapPin } from 'react-icons/tb';
+import { TbCalendar, TbCheck, TbX, TbTrash, TbUser, TbFilter, TbEye, TbClock, TbMapPin, TbPrinter } from 'react-icons/tb';
 import { HiOutlineOfficeBuilding } from 'react-icons/hi';
+import {
+  downloadBookingPDF,
+  downloadBookingsByIds,
+  downloadBookingsByFilter,
+  type PDFStyle,
+} from '@/lib/downloadBookingPDF';
 
 interface BookingWithUser extends Booking {
   user?: User;
@@ -23,6 +29,11 @@ function ManageBookingsPage() {
   const [filterRoomId, setFilterRoomId] = useState<number>(0);
   const [filterDate, setFilterDate] = useState<string>('');
   const [updating, setUpdating] = useState<number | null>(null);
+  const [printing, setPrinting] = useState<number | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [pdfStyle, setPdfStyle] = useState<PDFStyle>('notice');
+  const [showFooter, setShowFooter] = useState<boolean>(true);
+  const [batchPrinting, setBatchPrinting] = useState<'selected' | 'filter' | null>(null);
 
   useEffect(() => {
     // Only fetch if we have a token (authenticated)
@@ -82,6 +93,70 @@ function ManageBookingsPage() {
       alert(err?.error?.message || 'ไม่สามารถอัพเดทสถานะได้');
     } finally {
       setUpdating(null);
+    }
+  };
+
+  const handlePrint = async (bookingId: number) => {
+    try {
+      setPrinting(bookingId);
+      await downloadBookingPDF(bookingId, { style: pdfStyle, showFooter });
+    } catch (err: any) {
+      alert(err?.error?.message || 'ไม่สามารถดาวน์โหลด PDF ได้');
+    } finally {
+      setPrinting(null);
+    }
+  };
+
+  const toggleSelect = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = (visibleIds: number[]) => {
+    setSelectedIds((prev) => {
+      const allSelected = visibleIds.every((id) => prev.has(id));
+      if (allSelected) {
+        const next = new Set(prev);
+        visibleIds.forEach((id) => next.delete(id));
+        return next;
+      }
+      const next = new Set(prev);
+      visibleIds.forEach((id) => next.add(id));
+      return next;
+    });
+  };
+
+  const handleBatchPrintSelected = async () => {
+    if (selectedIds.size === 0) return;
+    try {
+      setBatchPrinting('selected');
+      await downloadBookingsByIds(Array.from(selectedIds), {
+        style: pdfStyle,
+        showFooter,
+      });
+    } catch (err: any) {
+      alert(err?.error?.message || 'ไม่สามารถดาวน์โหลด PDF ได้');
+    } finally {
+      setBatchPrinting(null);
+    }
+  };
+
+  const handleBatchPrintFilter = async () => {
+    const filter: { status?: string; room_id?: number; booking_date?: string } = {};
+    if (filterStatus && filterStatus !== 'all') filter.status = filterStatus;
+    if (filterRoomId) filter.room_id = filterRoomId;
+    if (filterDate) filter.booking_date = filterDate;
+    try {
+      setBatchPrinting('filter');
+      await downloadBookingsByFilter(filter, { style: pdfStyle, showFooter });
+    } catch (err: any) {
+      alert(err?.error?.message || 'ไม่สามารถดาวน์โหลด PDF ได้');
+    } finally {
+      setBatchPrinting(null);
     }
   };
 
@@ -268,6 +343,57 @@ function ManageBookingsPage() {
           </div>
         </div>
 
+        {/* PDF Print Toolbar */}
+        {bookings.length > 0 && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 mb-4 flex flex-wrap items-center gap-3">
+            <TbPrinter className="text-teal-600 dark:text-teal-400 w-5 h-5" />
+            <span className="font-semibold text-gray-700 dark:text-gray-200">พิมพ์ PDF:</span>
+
+            <label className="text-sm text-gray-600 dark:text-gray-300">รูปแบบ</label>
+            <select
+              value={pdfStyle}
+              onChange={(e) => setPdfStyle(e.target.value as PDFStyle)}
+              className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-teal-500"
+            >
+              <option value="notice">แปะหน้าห้อง (1 หน้า/รายการ)</option>
+              <option value="report">สรุปรายการ (ตาราง)</option>
+            </select>
+
+            <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showFooter}
+                onChange={(e) => setShowFooter(e.target.checked)}
+                className="rounded text-teal-600 focus:ring-teal-500"
+              />
+              แสดง footer (พิมพ์เมื่อ / รหัสการจอง)
+            </label>
+
+            <div className="flex-1" />
+
+            <button
+              onClick={handleBatchPrintSelected}
+              disabled={selectedIds.size === 0 || batchPrinting !== null}
+              className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm"
+            >
+              <TbPrinter className="w-4 h-4" />
+              {batchPrinting === 'selected'
+                ? 'กำลังสร้าง...'
+                : `พิมพ์ที่เลือก (${selectedIds.size})`}
+            </button>
+
+            <button
+              onClick={handleBatchPrintFilter}
+              disabled={batchPrinting !== null}
+              title="พิมพ์เฉพาะการจองที่อนุมัติแล้ว ตามเงื่อนไข room/date ปัจจุบัน"
+              className="px-4 py-2 bg-white hover:bg-teal-50 text-teal-700 border border-teal-600 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm"
+            >
+              <TbPrinter className="w-4 h-4" />
+              {batchPrinting === 'filter' ? 'กำลังสร้าง...' : 'พิมพ์ทั้งหมดที่อนุมัติ (ตาม filter)'}
+            </button>
+          </div>
+        )}
+
         {/* Bookings List */}
         {bookings.length === 0 ? (
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-12 text-center">
@@ -276,12 +402,51 @@ function ManageBookingsPage() {
           </div>
         ) : (
           <div className="space-y-4">
+            {/* Select-all row — only approved bookings are selectable for printing */}
+            {(() => {
+              const approvedIds = bookings
+                .filter((b) => b.status === 'approved')
+                .map((b) => b.booking_id);
+              return (
+                <label className="flex items-center gap-3 px-6 py-2 text-sm text-gray-600 dark:text-gray-300 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={
+                      approvedIds.length > 0 &&
+                      approvedIds.every((id) => selectedIds.has(id))
+                    }
+                    onChange={() => toggleSelectAll(approvedIds)}
+                    disabled={approvedIds.length === 0}
+                    className="rounded text-teal-600 focus:ring-teal-500 w-4 h-4 disabled:opacity-50"
+                  />
+                  เลือกทั้งหมดที่อนุมัติแล้ว ({approvedIds.length}/{bookings.length})
+                </label>
+              );
+            })()}
+
             {bookings.map((booking) => (
               <div
                 key={booking.booking_id}
                 className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow"
               >
                 <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                  {/* Checkbox — only approved bookings can be printed */}
+                  <div className="flex items-start pt-1">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(booking.booking_id)}
+                      onChange={() => toggleSelect(booking.booking_id)}
+                      disabled={booking.status !== 'approved'}
+                      title={
+                        booking.status !== 'approved'
+                          ? 'พิมพ์ PDF ได้เฉพาะการจองที่อนุมัติแล้ว'
+                          : undefined
+                      }
+                      className="rounded text-teal-600 focus:ring-teal-500 w-5 h-5 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                      aria-label={`เลือก booking #${booking.booking_id}`}
+                    />
+                  </div>
+
                   {/* Left Side - Booking Info */}
                   <div className="flex-1">
                     <div className="flex items-start justify-between mb-3">
@@ -375,6 +540,16 @@ function ManageBookingsPage() {
                           {updating === booking.booking_id ? 'กำลังปฏิเสธ...' : 'ปฏิเสธ'}
                         </button>
                       </>
+                    )}
+                    {booking.status === 'approved' && (
+                      <button
+                        onClick={() => handlePrint(booking.booking_id)}
+                        disabled={printing === booking.booking_id}
+                        className="px-4 py-2 bg-white hover:bg-teal-50 text-teal-700 border border-teal-600 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap justify-center"
+                      >
+                        <TbPrinter className="w-4 h-4" />
+                        {printing === booking.booking_id ? 'กำลังสร้าง...' : 'พิมพ์ PDF'}
+                      </button>
                     )}
                     <button
                       onClick={() => handleDelete(booking.booking_id)}

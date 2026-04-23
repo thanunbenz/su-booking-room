@@ -4,18 +4,35 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import MainLayout from '@/components/layout/MainLayout';
 import Link from 'next/link';
-import { IoArrowBack, IoCalendarOutline, IoTimeOutline, IoLocationOutline, IoPersonOutline, IoDocumentTextOutline } from 'react-icons/io5';
+import { IoArrowBack, IoCalendarOutline, IoTimeOutline, IoLocationOutline, IoPersonOutline, IoDocumentTextOutline, IoPrintOutline } from 'react-icons/io5';
 import { HiOutlineAcademicCap, HiOutlineOfficeBuilding } from 'react-icons/hi';
 import { bookingApi } from '@/lib/api/client';
 import type { Booking } from '@/lib/api/types';
+import { useAuth } from '@/contexts/AuthContext';
+import { downloadBookingPDF } from '@/lib/downloadBookingPDF';
 
 export default function BookingDetailPage() {
     const params = useParams();
     const bookingId = params.id as string;
+    const { user } = useAuth();
+    const isAdmin = user?.role?.role_name === 'admin';
 
     const [booking, setBooking] = useState<Booking | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [printing, setPrinting] = useState(false);
+
+    const handlePrint = async () => {
+        if (!booking) return;
+        try {
+            setPrinting(true);
+            await downloadBookingPDF(booking.booking_id);
+        } catch (err: any) {
+            alert(err?.error?.message || 'ไม่สามารถดาวน์โหลด PDF ได้');
+        } finally {
+            setPrinting(false);
+        }
+    };
 
     useEffect(() => {
         const fetchBooking = async () => {
@@ -278,8 +295,18 @@ export default function BookingDetailPage() {
                             </div>
                         )}
 
-                        {/* Action Button */}
-                        <div className="mt-8 flex justify-center">
+                        {/* Action Buttons */}
+                        <div className="mt-8 flex flex-wrap justify-center gap-3">
+                            {isAdmin && booking.status === 'approved' && (
+                                <button
+                                    onClick={handlePrint}
+                                    disabled={printing}
+                                    className="px-6 py-3 bg-white dark:bg-gray-800 hover:bg-teal-50 dark:hover:bg-gray-700 text-teal-700 dark:text-teal-400 font-semibold rounded-lg border-2 border-teal-600 dark:border-teal-400 shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                                >
+                                    <IoPrintOutline className="h-5 w-5" />
+                                    {printing ? 'กำลังสร้าง PDF...' : 'พิมพ์ PDF (แปะหน้าห้อง)'}
+                                </button>
+                            )}
                             <Link
                                 href="/my-bookings"
                                 className="px-8 py-3 bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2"

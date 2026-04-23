@@ -7,11 +7,15 @@ import { withRole } from '@/lib/withRole';
 import MainLayout from '@/components/layout/MainLayout';
 import { bookingApi, roomApi, buildingApi } from '@/lib/api/client';
 import { Booking, Room, Building } from '@/lib/api/types';
-import { TbCalendar, TbClock, TbMapPin, TbFileText, TbX, TbEye, TbUser } from 'react-icons/tb';
+import { TbCalendar, TbClock, TbMapPin, TbFileText, TbX, TbEye, TbUser, TbPrinter } from 'react-icons/tb';
 import { HiOutlineOfficeBuilding } from 'react-icons/hi';
+import { useAuth } from '@/contexts/AuthContext';
+import { downloadBookingPDF } from '@/lib/downloadBookingPDF';
 
 function MyBookingsPage() {
   const router = useRouter();
+  const { user } = useAuth();
+  const isAdmin = user?.role?.role_name === 'admin';
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [buildings, setBuildings] = useState<Building[]>([]);
@@ -19,6 +23,7 @@ function MyBookingsPage() {
   const [error, setError] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [cancelling, setCancelling] = useState<number | null>(null);
+  const [printing, setPrinting] = useState<number | null>(null);
 
   useEffect(() => {
     // Only fetch if we have a token (authenticated)
@@ -51,6 +56,17 @@ function MyBookingsPage() {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePrint = async (bookingId: number) => {
+    try {
+      setPrinting(bookingId);
+      await downloadBookingPDF(bookingId);
+    } catch (err: any) {
+      alert(err?.error?.message || 'ไม่สามารถดาวน์โหลด PDF ได้');
+    } finally {
+      setPrinting(null);
     }
   };
 
@@ -282,6 +298,17 @@ function MyBookingsPage() {
                       <TbEye className="w-4 h-4" />
                       ดูรายละเอียด
                     </Link>
+
+                    {isAdmin && booking.status === 'approved' && (
+                      <button
+                        onClick={() => handlePrint(booking.booking_id)}
+                        disabled={printing === booking.booking_id}
+                        className="px-4 py-2 bg-white hover:bg-teal-50 text-teal-700 border border-teal-600 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap justify-center"
+                      >
+                        <TbPrinter className="w-4 h-4" />
+                        {printing === booking.booking_id ? 'กำลังสร้าง...' : 'พิมพ์ PDF'}
+                      </button>
+                    )}
 
                     {(booking.status === 'pending' || booking.status === 'approved') && (
                       <button

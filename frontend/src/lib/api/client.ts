@@ -389,6 +389,67 @@ export const bookingApi = {
       method: 'DELETE',
     })
   },
+
+  /**
+   * Download a single booking's PDF (Admin only).
+   * style = "notice" (door notice, default) or "report" (compact table).
+   * showFooter toggles the "พิมพ์เมื่อ..." line.
+   */
+  downloadPDF: async (
+    id: number,
+    opts?: { style?: 'notice' | 'report'; showFooter?: boolean }
+  ): Promise<Blob> => {
+    const token = getToken()
+    const params = new URLSearchParams()
+    if (opts?.style) params.set('style', opts.style)
+    if (opts?.showFooter === false) params.set('footer', '0')
+    const qs = params.toString()
+    const res = await fetch(
+      `${API_BASE_URL}/bookings/${id}/pdf${qs ? '?' + qs : ''}`,
+      { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+    )
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        error: { code: 'HTTP_' + res.status, message: res.statusText },
+      }))
+      throw err as ApiError
+    }
+    return res.blob()
+  },
+
+  /**
+   * Download multiple bookings as one PDF (Admin only).
+   * Provide either `ids` (explicit selection) or `filter` (same shape as getAll).
+   */
+  downloadBatchPDF: async (req: {
+    ids?: number[]
+    filter?: { status?: string; room_id?: number; booking_date?: string }
+    style?: 'notice' | 'report'
+    showFooter?: boolean
+  }): Promise<Blob> => {
+    const token = getToken()
+    const body: Record<string, unknown> = {}
+    if (req.ids && req.ids.length > 0) body.ids = req.ids
+    if (req.filter) body.filter = req.filter
+    if (req.style) body.style = req.style
+    if (req.showFooter === false) body.show_footer = false
+
+    const res = await fetch(`${API_BASE_URL}/bookings/pdf/batch`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(body),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        error: { code: 'HTTP_' + res.status, message: res.statusText },
+      }))
+      throw err as ApiError
+    }
+    return res.blob()
+  },
 }
 
 // ===================================

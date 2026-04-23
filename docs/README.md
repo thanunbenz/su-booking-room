@@ -24,6 +24,7 @@ Complete documentation for SU Booking Room system.
 
 ### Features
 - [Notification System](features/notifications.md) - Email notifications
+- [Booking PDF Print](features/pdf-print.md) - Single + batch PDF generation (door notice / report)
 
 ### API
 - [API Overview](api/README.md) - API documentation

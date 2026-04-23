@@ -70,9 +70,11 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, notifService *services.Notificatio
 	bookings.Get("/my", middleware.AuthMiddleware, bookingHandler.GetMyBookings)                                // User - ดูการจองของตัวเอง
 	bookings.Get("/",  bookingHandler.GetAll)                   // Admin only - ดูการจองทั้งหมด (supports ?status=, ?room_id=, ?booking_date= query params)
 	bookings.Get("/:id", middleware.AuthMiddleware, bookingHandler.GetByID)                                     // User/Admin - ดูการจองตาม ID
+	bookings.Get("/:id/pdf", middleware.AuthMiddleware, middleware.AdminOnly, middleware.PDFRateLimiter, bookingHandler.DownloadPDF) // Admin only - ดาวน์โหลดใบยืนยันการจองเป็น PDF (rate limited)
 
 	// POST routes
-	bookings.Post("/", middleware.AuthMiddleware, middleware.BookingRateLimiter, bookingHandler.Create) // User - สร้างการจอง (with rate limiting)
+	bookings.Post("/", middleware.AuthMiddleware, middleware.BookingRateLimiter, bookingHandler.Create)                                      // User - สร้างการจอง (with rate limiting)
+	bookings.Post("/pdf/batch", middleware.AuthMiddleware, middleware.AdminOnly, middleware.PDFRateLimiter, bookingHandler.DownloadBatchPDF) // Admin only - พิมพ์ PDF หลายรายการ (rate limited)
 
 	// PATCH routes
 	bookings.Patch("/:id/status", middleware.AuthMiddleware, middleware.AdminOnly, bookingHandler.UpdateStatus) // Admin only - อนุมัติ/ปฏิเสธ

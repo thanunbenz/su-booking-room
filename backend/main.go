@@ -27,6 +27,11 @@ func main() {
 	// Initialize validator
 	utils.InitValidator()
 
+	// Verify embedded Thai fonts for PDF generation
+	if err := utils.InitPDFFonts(); err != nil {
+		log.Fatalf("❌ Failed to load PDF fonts: %v", err)
+	}
+
 	// สร้าง Fiber app พร้อม error handler
 	app := fiber.New(fiber.Config{
 		ErrorHandler: middleware.ErrorHandler,
@@ -52,6 +57,9 @@ func main() {
 
 	// Initialize rate limiter (max 10 bookings per hour per user)
 	middleware.InitRateLimiter(10, 1*time.Hour)
+
+	// Initialize PDF rate limiter (max 30 PDF downloads per minute per admin)
+	middleware.InitPDFRateLimiter(30, 1*time.Minute)
 
 	// Initialize reminder service
 	reminderEnabled := getEnv("REMINDER_ENABLED", "true") == "true"

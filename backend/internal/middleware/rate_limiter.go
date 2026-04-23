@@ -25,12 +25,14 @@ type Visitor struct {
 
 var (
 	bookingLimiter *RateLimiter
-	once           sync.Once
+	pdfLimiter     *RateLimiter
+	bookingOnce    sync.Once
+	pdfOnce        sync.Once
 )
 
-// InitRateLimiter - สร้าง rate limiter instance
+// InitRateLimiter - สร้าง rate limiter instance สำหรับการสร้างการจอง
 func InitRateLimiter(limit int, window time.Duration) {
-	once.Do(func() {
+	bookingOnce.Do(func() {
 		bookingLimiter = &RateLimiter{
 			visitors: make(map[uint]*Visitor),
 			limit:    limit,
@@ -38,6 +40,18 @@ func InitRateLimiter(limit int, window time.Duration) {
 		}
 		// Clean up old visitors ทุก 10 นาที
 		go bookingLimiter.cleanup()
+	})
+}
+
+// InitPDFRateLimiter - สร้าง rate limiter instance สำหรับการดาวน์โหลด PDF
+func InitPDFRateLimiter(limit int, window time.Duration) {
+	pdfOnce.Do(func() {
+		pdfLimiter = &RateLimiter{
+			visitors: make(map[uint]*Visitor),
+			limit:    limit,
+			window:   window,
+		}
+		go pdfLimiter.cleanup()
 	})
 }
 
@@ -55,6 +69,25 @@ func BookingRateLimiter(c *fiber.Ctx) error {
 			fmt.Sprintf("Rate limit exceeded. Maximum %d bookings per %v",
 				bookingLimiter.limit,
 				bookingLimiter.window))
+	}
+
+	return c.Next()
+}
+
+// PDFRateLimiter - middleware สำหรับจำกัดการดาวน์โหลด PDF
+// (PDF generation เป็น CPU-bound จึงต้องจำกัด)
+func PDFRateLimiter(c *fiber.Ctx) error {
+	if pdfLimiter == nil {
+		return c.Next()
+	}
+
+	userID := c.Locals("user_id").(uint)
+
+	if !pdfLimiter.Allow(userID) {
+		return utils.StandardResponse(c, fiber.StatusTooManyRequests, nil,
+			fmt.Sprintf("พิมพ์ PDF บ่อยเกินไป (สูงสุด %d ครั้งต่อ %v)",
+				pdfLimiter.limit,
+				pdfLimiter.window))
 	}
 
 	return c.Next()

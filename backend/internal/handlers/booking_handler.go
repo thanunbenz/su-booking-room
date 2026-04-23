@@ -351,3 +351,137 @@ func (h *BookingHandler) Delete(c *fiber.Ctx) error {
 
 	return utils.StandardResponse(c, fiber.StatusOK, nil, "Booking deleted successfully")
 }
+
+// pdfOptionsFromQuery reads style/footer options from query string.
+// Accepts ?style=notice|report  &  ?footer=1|0 (default: notice, footer=1).
+func pdfOptionsFromQuery(c *fiber.Ctx) utils.PDFOptions {
+	opts := utils.DefaultPDFOptions()
+	if s := c.Query("style"); s == string(utils.PDFStyleReport) {
+		opts.Style = utils.PDFStyleReport
+	}
+	if f := c.Query("footer"); f == "0" || f == "false" {
+		opts.ShowFooter = false
+	}
+	return opts
+}
+
+// DownloadPDF - GET /bookings/:id/pdf (Admin only - ดาวน์โหลดใบยืนยันการจองเป็น PDF)
+// Query params: ?style=notice|report (default notice), ?footer=0|1 (default 1)
+func (h *BookingHandler) DownloadPDF(c *fiber.Ctx) error {
+	id, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return utils.BadRequestResponse(c, "Invalid booking id")
+	}
+
+	var booking models.Booking
+	if err := h.DB.
+		Preload("User.Role").
+		Preload("Room.Building").
+		First(&booking, "booking_id = ?", id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return utils.NotFoundResponse(c, "Booking not found")
+		}
+		return utils.InternalServerErrorResponse(c, err.Error())
+	}
+
+	if booking.Status != "approved" {
+		return utils.BadRequestResponse(c, "พิมพ์ PDF ได้เฉพาะการจองที่อนุมัติแล้วเท่านั้น")
+	}
+
+	pdfBytes, err := utils.GenerateBookingPDF(&booking, pdfOptionsFromQuery(c))
+	if err != nil {
+		return utils.InternalServerErrorResponse(c, "Failed to generate PDF: "+err.Error())
+	}
+
+	c.Set("Content-Type", "application/pdf")
+	c.Set("Content-Disposition", fmt.Sprintf(`attachment; filename="booking-%d.pdf"`, id))
+	return c.Send(pdfBytes)
+}
+
+// maxBatchPDFBookings caps how many bookings can be rendered in one batch
+// call — protects against OOM / CPU exhaustion from a runaway client.
+const maxBatchPDFBookings = 200
+
+// BatchPDFRequest is the body for POST /bookings/pdf/batch.
+// Provide either IDs (explicit selection) or Filter.
+type BatchPDFRequest struct {
+	IDs        []int  `json:"ids"`
+	Style      string `json:"style"`       // "notice" | "report"
+	ShowFooter *bool  `json:"show_footer"` // pointer so we distinguish unset vs false
+	Filter     *struct {
+		RoomID      int    `json:"room_id"`
+		BookingDate string `json:"booking_date"`
+	} `json:"filter"`
+}
+
+// DownloadBatchPDF - POST /bookings/pdf/batch (Admin only)
+// Body: { ids?: [int], filter?: {...}, style?: "notice"|"report", show_footer?: bool }
+// Either `ids` or `filter` must be provided. At least one matching booking is required.
+func (h *BookingHandler) DownloadBatchPDF(c *fiber.Ctx) error {
+	var req BatchPDFRequest
+	if err := c.BodyParser(&req); err != nil {
+		return utils.BadRequestResponse(c, "Invalid request body: "+err.Error())
+	}
+
+	if len(req.IDs) > maxBatchPDFBookings {
+		return utils.BadRequestResponse(c,
+			fmt.Sprintf("ขอ PDF ได้ครั้งละไม่เกิน %d รายการ", maxBatchPDFBookings))
+	}
+
+	// PDFs are only issued for approved bookings — enforce server-side.
+	query := h.DB.
+		Preload("User.Role").
+		Preload("Room.Building").
+		Where("status = ?", "approved").
+		Order("booking_date ASC, start_time ASC").
+		Limit(maxBatchPDFBookings + 1) // +1 so we can detect overflow
+
+	switch {
+	case len(req.IDs) > 0:
+		query = query.Where("booking_id IN ?", req.IDs)
+	case req.Filter != nil:
+		if req.Filter.RoomID > 0 {
+			query = query.Where("room_id = ?", req.Filter.RoomID)
+		}
+		if req.Filter.BookingDate != "" {
+			query = query.Where("booking_date = ?", req.Filter.BookingDate)
+		}
+	default:
+		return utils.BadRequestResponse(c, "Provide either 'ids' or 'filter'")
+	}
+
+	var bookings []models.Booking
+	if err := query.Find(&bookings).Error; err != nil {
+		return utils.InternalServerErrorResponse(c, err.Error())
+	}
+	if len(bookings) == 0 {
+		return utils.NotFoundResponse(c, "ไม่มีการจองที่อนุมัติแล้วตรงกับเงื่อนไข")
+	}
+	if len(bookings) > maxBatchPDFBookings {
+		return utils.BadRequestResponse(c,
+			fmt.Sprintf("เงื่อนไขนี้มีรายการเกิน %d กรุณากรองให้แคบลง", maxBatchPDFBookings))
+	}
+
+	opts := utils.DefaultPDFOptions()
+	if req.Style == string(utils.PDFStyleReport) {
+		opts.Style = utils.PDFStyleReport
+	}
+	if req.ShowFooter != nil {
+		opts.ShowFooter = *req.ShowFooter
+	}
+
+	pdfBytes, err := utils.GenerateBookingsPDF(bookings, opts)
+	if err != nil {
+		return utils.InternalServerErrorResponse(c, "Failed to generate PDF: "+err.Error())
+	}
+
+	filename := "bookings"
+	if opts.Style == utils.PDFStyleReport {
+		filename += "-report"
+	}
+	filename += fmt.Sprintf("-%s.pdf", time.Now().Format("20060102-150405"))
+
+	c.Set("Content-Type", "application/pdf")
+	c.Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+	return c.Send(pdfBytes)
+}
