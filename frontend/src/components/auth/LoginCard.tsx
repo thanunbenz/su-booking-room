@@ -105,7 +105,9 @@ export default function LoginCard() {
             disabled={isLoading}
             required
           />
-          <Link href={"/forgetpassword"} className='mt-2 text-right inline-block underline text-teal-700 hover:text-teal-800 dark:text-teal-500 dark:hover:text-teal-600 text-sm'>ลืมรหัสผ่าน ?</Link>
+          <div className='mt-2 flex justify-end'>
+            <Link href={"/forgetpassword"} className='underline text-teal-700 hover:text-teal-800 dark:text-teal-500 dark:hover:text-teal-600 text-sm'>ลืมรหัสผ่าน ?</Link>
+          </div>
         </div>
 
 
