@@ -36,3 +36,6 @@ backend/tmp/
 backend/build-errors.log
 
 # Frontend specific - handled by frontend/.gitignore
+
+#docx
+*.docx

@@ -12,43 +12,46 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+// Dark mode disabled — theme is locked to 'light'. Implementation kept for future re-enable.
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>('light');
+  const [theme] = useState<Theme>('light');
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    // Check localStorage or system preference
-    const savedTheme = localStorage.getItem('theme') as Theme | null;
-    if (savedTheme) {
-      setTheme(savedTheme);
-      if (savedTheme === 'dark') {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
-    } else {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const initialTheme = prefersDark ? 'dark' : 'light';
-      setTheme(initialTheme);
-      if (prefersDark) {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
-    }
+    document.documentElement.classList.remove('dark');
+    // Original logic preserved below for future re-enable:
+    // const savedTheme = localStorage.getItem('theme') as Theme | null;
+    // if (savedTheme) {
+    //   setTheme(savedTheme);
+    //   if (savedTheme === 'dark') {
+    //     document.documentElement.classList.add('dark');
+    //   } else {
+    //     document.documentElement.classList.remove('dark');
+    //   }
+    // } else {
+    //   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    //   const initialTheme = prefersDark ? 'dark' : 'light';
+    //   setTheme(initialTheme);
+    //   if (prefersDark) {
+    //     document.documentElement.classList.add('dark');
+    //   } else {
+    //     document.documentElement.classList.remove('dark');
+    //   }
+    // }
   }, []);
 
   const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
-
-    if (newTheme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
+    // No-op while dark mode is disabled.
+    // Original logic preserved below for future re-enable:
+    // const newTheme = theme === 'light' ? 'dark' : 'light';
+    // setTheme(newTheme);
+    // localStorage.setItem('theme', newTheme);
+    // if (newTheme === 'dark') {
+    //   document.documentElement.classList.add('dark');
+    // } else {
+    //   document.documentElement.classList.remove('dark');
+    // }
   };
 
   return (

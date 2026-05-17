@@ -56,7 +56,7 @@ func main() {
 	notificationService := services.NewNotificationService(config.DB, emailService, baseURL)
 
 	// Initialize rate limiter (max 10 bookings per hour per user)
-	middleware.InitRateLimiter(10, 1*time.Hour)
+	// middleware.InitRateLimiter(10, 1*time.Hour)
 
 	// Initialize PDF rate limiter (max 30 PDF downloads per minute per admin)
 	middleware.InitPDFRateLimiter(30, 1*time.Minute)

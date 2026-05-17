@@ -145,7 +145,6 @@ export default function LoginCard() {
         <span className="text-sm font-medium">Sign in with SU Account</span>
       </button>
 
-
       <div className="mt-8 text-center text-sm text-gray-600 dark:text-gray-400">
         Don&apos;t have an account?
         <Link

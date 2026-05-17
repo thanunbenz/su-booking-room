@@ -1,0 +1,2279 @@
+{
+  "info": {
+    "_postman_id": "956a1bd1-8b38-4dd2-88e1-656847cad9a7",
+    "name": "SU Booking Room — Flow-Based API Tests",
+    "description": "**SU Booking Room API** — Postman collection จัดเรียงตาม workflow\n\n## วิธีใช้งาน\n1. Import collection + environment file\n2. เลือก environment \"SU Booking Room - Local\"\n3. รัน **Flow 0 — Setup & Health** ก่อนเพื่อตรวจสอบ server\n4. รัน **Flow 1 — Authentication** เพื่อให้ได้ token (เก็บอัตโนมัติ)\n5. จากนั้นรัน flow อื่นๆ ตามต้องการ\n\n## Flows\n- **Flow 0** — Setup & Health (health check, seed)\n- **Flow 1** — Authentication (register, login admin/teacher, me)\n- **Flow 2** — Browse Public (buildings, rooms, calendar — ไม่ต้อง login)\n- **Flow 3** — User Booking (สร้าง, ดู, ยกเลิกการจอง + negative tests)\n- **Flow 4** — Admin Approval & PDF (อนุมัติ, ปฏิเสธ, พิมพ์ PDF)\n- **Flow 5** — Admin Buildings CRUD\n- **Flow 6** — Admin Rooms CRUD\n- **Flow 7** — Admin Fixed Schedules (รวม bulk create)\n- **Flow 8** — Admin Users & Roles\n- **Flow 9** — Notifications\n- **Flow 10** — Test Email\n\n## Auto-Capture Variables\nToken และ ID ต่างๆ จะถูกเก็บอัตโนมัติเมื่อรัน request:\n- `admin_access_token` — จาก Flow 1.02\n- `user_access_token` — จาก Flow 1.03\n- `last_building_id`, `last_room_id`, `last_booking_id`,\n  `last_schedule_id`, `last_target_user_id`, `last_role_id`,\n  `last_notification_id`, `date_tomorrow`, `date_next_week`\n\nดังนั้นรันทีละ flow ตามลำดับได้เลย ไม่ต้อง copy-paste IDs",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Flow 0 — Setup & Health",
+      "description": "ตรวจสอบว่า server พร้อมใช้งาน และเตรียม mock data\nลำดับการรัน: 1 → 2 → 3 (ถ้าจำเป็น)",
+      "item": [
+        {
+          "name": "01. Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/health",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": "ตรวจสอบว่า backend ทำงานอยู่หรือไม่"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Service is healthy\", function () {",
+                  "  const r = pm.response.json();",
+                  "  pm.expect(r.success).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02. Login as Admin (เพื่อใช้ seed)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/auth/login",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "login เป็น admin เพื่อให้มี token สำหรับ seed",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "if (r.success && r.data && r.data.tokens) {",
+                  "  pm.environment.set(\"admin_access_token\", r.data.tokens.access_token);",
+                  "  pm.environment.set(\"admin_refresh_token\", r.data.tokens.refresh_token);",
+                  "  pm.environment.set(\"admin_user_id\", r.data.user.user_id);",
+                  "  console.log(\"Saved admin_access_token\");",
+                  "}",
+                  "pm.test(\"Status 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03. Seed Mock Data (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/seed/all",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "seed",
+                "all"
+              ]
+            },
+            "description": "สร้าง mock data — ถ้ามีข้อมูลอยู่แล้วจะ error ให้ clear ก่อน"
+          },
+          "response": []
+        },
+        {
+          "name": "04. Clear All Data (Admin) — ใช้ระมัดระวัง",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/seed/clear",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "seed",
+                "clear"
+              ]
+            },
+            "description": "ลบข้อมูลทั้งหมดยกเว้น roles และ admin หลัก"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Flow 1 — Authentication",
+      "description": "ทดสอบการสมัครสมาชิก, login, และดึงข้อมูลผู้ใช้ปัจจุบัน\nToken ที่ได้จะถูกเก็บใน environment variable อัตโนมัติ\nลำดับการรัน: 1 → 2 → 3 → 4",
+      "item": [
+        {
+          "name": "01. Register New User (Visitor)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/auth/register",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "สมัครสมาชิกใหม่ — ต้องเป็น @silpakorn.edu เท่านั้น",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"newuser@silpakorn.edu\",\n  \"password\": \"password123\",\n  \"fullname\": \"นายทดสอบ ระบบ\",\n  \"username\": \"testuser_{{$randomInt}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "02. Login as Admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/auth/login",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Login เป็น admin → เก็บ token ลง admin_access_token",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "if (r.success && r.data && r.data.tokens) {",
+                  "  pm.environment.set(\"admin_access_token\", r.data.tokens.access_token);",
+                  "  pm.environment.set(\"admin_refresh_token\", r.data.tokens.refresh_token);",
+                  "  pm.environment.set(\"admin_user_id\", r.data.user.user_id);",
+                  "  console.log(\"Saved admin_access_token\");",
+                  "}",
+                  "pm.test(\"Status 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03. Login as Teacher",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/auth/login",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Login เป็น teacher → เก็บ token ลง user_access_token",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{teacher_email}}\",\n  \"password\": \"{{teacher_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "if (r.success && r.data && r.data.tokens) {",
+                  "  pm.environment.set(\"user_access_token\", r.data.tokens.access_token);",
+                  "  pm.environment.set(\"user_refresh_token\", r.data.tokens.refresh_token);",
+                  "  pm.environment.set(\"user_id\", r.data.user.user_id);",
+                  "  console.log(\"Saved user_access_token\");",
+                  "}",
+                  "pm.test(\"Status 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04. Get My Profile (/auth/me)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/auth/me",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            },
+            "description": "ดึงข้อมูล profile จาก JWT token"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Flow 2 — Browse (Public, ไม่ต้อง login)",
+      "description": "ทดสอบการดูข้อมูลที่ไม่ต้อง authentication\nลำดับการรัน: 1 → 2 → 3 → 4 → 5 → 6",
+      "item": [
+        {
+          "name": "01. List All Buildings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/buildings",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "buildings"
+              ]
+            },
+            "description": "ดูรายการอาคารทั้งหมด"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "if (r.success && r.data && r.data.length > 0) {",
+                  "  pm.environment.set(\"last_building_id\", r.data[0].building_id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02. Get Building By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/buildings/{{last_building_id}}",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "buildings",
+                "{{last_building_id}}"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "03. List Rooms in Building",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/buildings/{{last_building_id}}/rooms",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "buildings",
+                "{{last_building_id}}",
+                "rooms"
+              ]
+            },
+            "description": "ดูห้องในอาคารที่เลือก"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "if (r.success && r.data && r.data.length > 0) {",
+                  "  pm.environment.set(\"last_room_id\", r.data[0].room_id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04. List All Rooms",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/rooms",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "rooms"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "05. Get Room Schedules",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/rooms/{{last_room_id}}/schedules?day_of_week=1&semester=1/2567",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "rooms",
+                "{{last_room_id}}",
+                "schedules"
+              ],
+              "query": [
+                {
+                  "key": "day_of_week",
+                  "value": "1",
+                  "description": "1=จันทร์, ..., 7=อาทิตย์"
+                },
+                {
+                  "key": "semester",
+                  "value": "1/2567",
+                  "description": "ภาคการศึกษา"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "06. Check Room Availability (สำหรับวันพรุ่งนี้)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/rooms/{{last_room_id}}/availability?date={{date_tomorrow}}",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "rooms",
+                "{{last_room_id}}",
+                "availability"
+              ],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "{{date_tomorrow}}",
+                  "description": "วันที่ต้องการตรวจสอบ (YYYY-MM-DD)"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const fmt = d => d.toISOString().slice(0,10);",
+                  "const today = new Date();",
+                  "const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);",
+                  "const nextWeek = new Date(today); nextWeek.setDate(today.getDate() + 7);",
+                  "pm.environment.set(\"date_tomorrow\", fmt(tomorrow));",
+                  "pm.environment.set(\"date_next_week\", fmt(nextWeek));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "07. Public Calendar (sanitized)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/bookings/public-calendar?from={{date_tomorrow}}&to={{date_next_week}}",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "bookings",
+                "public-calendar"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "{{date_tomorrow}}",
+                  "description": "วันเริ่ม"
+                },
+                {
+                  "key": "to",
+                  "value": "{{date_next_week}}",
+                  "description": "วันสิ้นสุด"
+                }
+              ]
+            },
+            "description": "ปฏิทินสาธารณะ — เฉพาะ approved + ไม่มี PII"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const fmt = d => d.toISOString().slice(0,10);",
+                  "const today = new Date();",
+                  "const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);",
+                  "const nextWeek = new Date(today); nextWeek.setDate(today.getDate() + 7);",
+                  "pm.environment.set(\"date_tomorrow\", fmt(tomorrow));",
+                  "pm.environment.set(\"date_next_week\", fmt(nextWeek));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "08. List Roles (Public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/roles",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "roles"
+              ]
+            },
+            "description": "ใช้สำหรับ dropdown ในหน้าสมัครสมาชิก"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Flow 3 — User Booking (สิทธิ์ Teacher/Visitor)",
+      "description": "ทดสอบ flow การจองห้องของผู้ใช้ทั่วไป\nรันทั้ง flow ตามลำดับ — ต้อง Login as Teacher ใน Flow 1 ก่อน\nลำดับ: 1 → 2 → 3 → 4 → 5 → 6 → 7",
+      "item": [
+        {
+          "name": "01. Check Room Availability",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/rooms/{{last_room_id}}/availability?date={{date_next_week}}",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "rooms",
+                "{{last_room_id}}",
+                "availability"
+              ],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "{{date_next_week}}",
+                  "description": "วันที่ต้องการ"
+                }
+              ]
+            },
+            "description": "เช็คว่าห้องว่างไหมในวันนั้น"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const fmt = d => d.toISOString().slice(0,10);",
+                  "const today = new Date();",
+                  "const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);",
+                  "const nextWeek = new Date(today); nextWeek.setDate(today.getDate() + 7);",
+                  "pm.environment.set(\"date_tomorrow\", fmt(tomorrow));",
+                  "pm.environment.set(\"date_next_week\", fmt(nextWeek));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02. Create Booking (Single Day)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/bookings",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "bookings"
+              ]
+            },
+            "description": "สร้างการจองห้อง 1 วัน — saved booking_id",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"room_id\": \"{{last_room_id}}\",\n  \"title\": \"ประชุม Sprint Planning\",\n  \"detail\": \"ประชุมวางแผน sprint ที่ 5\",\n  \"equipment_request\": \"Projector 1 เครื่อง, ปลั๊กไฟ 4 ตัว\",\n  \"booking_date\": \"{{date_next_week}}\",\n  \"end_date\": \"{{date_next_week}}\",\n  \"start_time\": \"14:00\",\n  \"end_time\": \"16:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const fmt = d => d.toISOString().slice(0,10);",
+                  "const today = new Date();",
+                  "const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);",
+                  "const nextWeek = new Date(today); nextWeek.setDate(today.getDate() + 7);",
+                  "pm.environment.set(\"date_tomorrow\", fmt(tomorrow));",
+                  "pm.environment.set(\"date_next_week\", fmt(nextWeek));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "if (r.success && r.data && r.data.booking_id) {",
+                  "  pm.environment.set(\"last_booking_id\", r.data.booking_id);",
+                  "  console.log(\"Saved last_booking_id =\", r.data.booking_id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03. Create Multi-Day Booking",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/bookings",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "bookings"
+              ]
+            },
+            "description": "จองหลายวันต่อเนื่อง — start/end_time ใช้กับทุกวันในช่วง",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"room_id\": \"{{last_room_id}}\",\n  \"title\": \"Workshop AI/ML 3 วัน\",\n  \"detail\": \"อบรมเชิงปฏิบัติการ Machine Learning\",\n  \"booking_date\": \"{{date_next_week}}\",\n  \"end_date\": \"{{date_next_week_plus_2}}\",\n  \"start_time\": \"09:00\",\n  \"end_time\": \"12:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const fmt = d => d.toISOString().slice(0,10);",
+                  "const next = new Date(); next.setDate(next.getDate() + 7);",
+                  "const next2 = new Date(); next2.setDate(next2.getDate() + 9);",
+                  "pm.environment.set(\"date_next_week\", fmt(next));",
+                  "pm.environment.set(\"date_next_week_plus_2\", fmt(next2));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04. List My Bookings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/bookings/my",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "bookings",
+                "my"
+              ]
+            },
+            "description": "ดูการจองของตัวเอง (เรียงจากใหม่ → เก่า)"
+          },
+          "response": []
+        },
+        {
+          "name": "05. Get Booking By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/bookings/{{last_booking_id}}",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "bookings",
+                "{{last_booking_id}}"
+              ]
+            },
+            "description": "ดูรายละเอียดการจองที่เพิ่งสร้าง"
+          },
+          "response": []
+        },
+        {
+          "name": "06. Cancel My Booking",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/bookings/{{last_booking_id}}/cancel",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "bookings",
+                "{{last_booking_id}}",
+                "cancel"
+              ]
+            },
+            "description": "ยกเลิกการจองของตัวเอง — ใช้ได้กับสถานะ pending/approved เท่านั้น"
+          },
+          "response": []
+        },
+        {
+          "name": "07. (Negative) Try to Book in the Past",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/bookings",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "bookings"
+              ]
+            },
+            "description": "คาดหวัง 400 — Cannot book in the past",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"room_id\": \"{{last_room_id}}\",\n  \"title\": \"ทดสอบจองในอดีต\",\n  \"booking_date\": \"2020-01-01\",\n  \"end_date\": \"2020-01-01\",\n  \"start_time\": \"09:00\",\n  \"end_time\": \"10:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "08. (Negative) Try to Book Conflicting Time",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/bookings",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "bookings"
+              ]
+            },
+            "description": "คาดหวัง 409 — Time slot is already booked",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"room_id\": \"{{last_room_id}}\",\n  \"title\": \"ทดสอบจองซ้ำเวลา\",\n  \"booking_date\": \"{{date_next_week}}\",\n  \"end_date\": \"{{date_next_week}}\",\n  \"start_time\": \"14:00\",\n  \"end_time\": \"16:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const fmt = d => d.toISOString().slice(0,10);",
+                  "const today = new Date();",
+                  "const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);",
+                  "const nextWeek = new Date(today); nextWeek.setDate(today.getDate() + 7);",
+                  "pm.environment.set(\"date_tomorrow\", fmt(tomorrow));",
+                  "pm.environment.set(\"date_next_week\", fmt(nextWeek));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Flow 4 — Admin Approval & PDF",
+      "description": "ทดสอบ flow ของ admin ในการอนุมัติ/ปฏิเสธ และพิมพ์ PDF\nต้อง Login as Admin ใน Flow 1 ก่อน\nลำดับ: 1 → 2 → 3 → 4 → 5",
+      "item": [
+        {
+          "name": "01. List All Bookings (filter pending)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/bookings?status=pending",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "bookings"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "pending",
+                  "description": "pending | approved | rejected | cancelled"
+                }
+              ]
+            },
+            "description": "ดูการจองทั้งหมดที่รออนุมัติ"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "if (r.success && r.data && r.data.length > 0) {",
+                  "  pm.environment.set(\"last_booking_id\", r.data[0].booking_id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02. List Bookings By Date Range",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/bookings?from={{date_tomorrow}}&to={{date_next_week}}&room_id={{last_room_id}}",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "bookings"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "{{date_tomorrow}}",
+                  "description": "ช่วงเริ่ม"
+                },
+                {
+                  "key": "to",
+                  "value": "{{date_next_week}}",
+                  "description": "ช่วงสิ้นสุด"
+                },
+                {
+                  "key": "room_id",
+                  "value": "{{last_room_id}}",
+                  "description": "(optional) กรองห้อง"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const fmt = d => d.toISOString().slice(0,10);",
+                  "const today = new Date();",
+                  "const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);",
+                  "const nextWeek = new Date(today); nextWeek.setDate(today.getDate() + 7);",
+                  "pm.environment.set(\"date_tomorrow\", fmt(tomorrow));",
+                  "pm.environment.set(\"date_next_week\", fmt(nextWeek));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03. Approve Booking",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/bookings/{{last_booking_id}}/status",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "bookings",
+                "{{last_booking_id}}",
+                "status"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"approved\",\n  \"status_note\": \"อนุมัติแล้ว\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "04. Reject Booking (เลือกอันอื่นถ้าต้องการ)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/bookings/{{last_booking_id}}/status",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "bookings",
+                "{{last_booking_id}}",
+                "status"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"rejected\",\n  \"status_note\": \"ห้องไม่ว่างในช่วงเวลานั้น\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "05. Download Booking PDF (notice style)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/bookings/{{last_booking_id}}/pdf?style=notice&footer=1",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "bookings",
+                "{{last_booking_id}}",
+                "pdf"
+              ],
+              "query": [
+                {
+                  "key": "style",
+                  "value": "notice",
+                  "description": "notice | report"
+                },
+                {
+                  "key": "footer",
+                  "value": "1",
+                  "description": "0 | 1"
+                }
+              ]
+            },
+            "description": "ดาวน์โหลด PDF ใบยืนยัน — เฉพาะการจองที่ approved"
+          },
+          "response": []
+        },
+        {
+          "name": "06. Download Booking PDF (report style)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/bookings/{{last_booking_id}}/pdf?style=report",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "bookings",
+                "{{last_booking_id}}",
+                "pdf"
+              ],
+              "query": [
+                {
+                  "key": "style",
+                  "value": "report",
+                  "description": "report style"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "07. Batch PDF (by ids)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/bookings/pdf/batch",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "bookings",
+                "pdf",
+                "batch"
+              ]
+            },
+            "description": "พิมพ์ PDF หลายรายการในไฟล์เดียว",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\n    \"{{last_booking_id}}\"\n  ],\n  \"style\": \"report\",\n  \"show_footer\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "08. Batch PDF (by filter)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/bookings/pdf/batch",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "bookings",
+                "pdf",
+                "batch"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"filter\": {\n    \"room_id\": \"{{last_room_id}}\",\n    \"booking_date\": \"{{date_next_week}}\"\n  },\n  \"style\": \"notice\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const fmt = d => d.toISOString().slice(0,10);",
+                  "const today = new Date();",
+                  "const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);",
+                  "const nextWeek = new Date(today); nextWeek.setDate(today.getDate() + 7);",
+                  "pm.environment.set(\"date_tomorrow\", fmt(tomorrow));",
+                  "pm.environment.set(\"date_next_week\", fmt(nextWeek));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "09. Delete Booking (Hard Delete)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/bookings/{{last_booking_id}}",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "bookings",
+                "{{last_booking_id}}"
+              ]
+            },
+            "description": "ลบการจองออกจากระบบถาวร"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Flow 5 — Admin: Buildings CRUD",
+      "description": "ทดสอบ CRUD อาคาร — ต้อง Login as Admin ก่อน\nลำดับ: 1 → 2 → 3 → 4 → 5",
+      "item": [
+        {
+          "name": "01. Create Building",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/buildings",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "buildings"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"อาคารทดสอบ Postman\",\n  \"description\": \"อาคารสำหรับทดสอบ API\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "if (r.success && r.data && r.data.building_id) {",
+                  "  pm.environment.set(\"last_building_id\", r.data.building_id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02. Get Building By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/buildings/{{last_building_id}}",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "buildings",
+                "{{last_building_id}}"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "03. Get Building Name Only",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/buildings/{{last_building_id}}/name",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "buildings",
+                "{{last_building_id}}",
+                "name"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "04. Update Building",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/buildings/{{last_building_id}}",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "buildings",
+                "{{last_building_id}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"อาคารทดสอบ Postman (ปรับปรุง)\",\n  \"description\": \"ปรับปรุงคำอธิบาย\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "05. Delete Building (Cascade)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/buildings/{{last_building_id}}",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "buildings",
+                "{{last_building_id}}"
+              ]
+            },
+            "description": "ลบอาคารพร้อม rooms / bookings / schedules ที่เกี่ยวข้องทั้งหมด"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Flow 6 — Admin: Rooms CRUD",
+      "description": "ทดสอบ CRUD ห้อง — ต้อง Login as Admin และมี last_building_id\nลำดับ: 1 → 2 → 3 → 4",
+      "item": [
+        {
+          "name": "01. Create Room",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/rooms",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "rooms"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"building_id\": \"{{last_building_id}}\",\n  \"name\": \"ห้องทดสอบ Postman\",\n  \"capacity\": 30,\n  \"description\": \"ห้องสำหรับทดสอบ API\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "if (r.success && r.data && r.data.room_id) {",
+                  "  pm.environment.set(\"last_room_id\", r.data.room_id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02. Get Room By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/rooms/{{last_room_id}}",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "rooms",
+                "{{last_room_id}}"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "03. Update Room (partial)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/rooms/{{last_room_id}}",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "rooms",
+                "{{last_room_id}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"capacity\": 50,\n  \"description\": \"อัพเดท capacity\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "04. Delete Room",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/rooms/{{last_room_id}}",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "rooms",
+                "{{last_room_id}}"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Flow 7 — Admin: Fixed Schedules",
+      "description": "ทดสอบการจัดการตารางเรียนประจำของห้อง\nลำดับ: 1 → 2 → 3 → 4 → 5",
+      "item": [
+        {
+          "name": "01. List All Schedules",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/schedules?room_id={{last_room_id}}&semester=1/2567",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "schedules"
+              ],
+              "query": [
+                {
+                  "key": "room_id",
+                  "value": "{{last_room_id}}",
+                  "description": "(optional)"
+                },
+                {
+                  "key": "semester",
+                  "value": "1/2567",
+                  "description": "(optional)"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "02. Create Schedule",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/schedules",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "schedules"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"room_id\": \"{{last_room_id}}\",\n  \"subject\": \"CS999 ทดสอบ API\",\n  \"teacher_name\": \"อ. ทดสอบ ระบบ\",\n  \"day_of_week\": 1,\n  \"start_time\": \"08:00\",\n  \"end_time\": \"09:00\",\n  \"semester\": \"1/2567\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "if (r.success && r.data && r.data.schedule_id) {",
+                  "  pm.environment.set(\"last_schedule_id\", r.data.schedule_id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03. Bulk Create Schedules",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/schedules/bulk",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "schedules",
+                "bulk"
+              ]
+            },
+            "description": "สร้างหลายตารางพร้อมกัน — ใช้ transaction (rollback ทั้งหมดถ้า error)",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"schedules\": [\n    {\n      \"room_id\": \"{{last_room_id}}\",\n      \"subject\": \"CS101 โครงสร้างข้อมูล\",\n      \"teacher_name\": \"อ. A\",\n      \"day_of_week\": 2,\n      \"start_time\": \"09:00\",\n      \"end_time\": \"12:00\",\n      \"semester\": \"1/2567\"\n    },\n    {\n      \"room_id\": \"{{last_room_id}}\",\n      \"subject\": \"CS102 ฐานข้อมูล\",\n      \"teacher_name\": \"อ. B\",\n      \"day_of_week\": 4,\n      \"start_time\": \"13:00\",\n      \"end_time\": \"16:00\",\n      \"semester\": \"1/2567\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "04. Update Schedule",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/schedules/{{last_schedule_id}}",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "schedules",
+                "{{last_schedule_id}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"room_id\": \"{{last_room_id}}\",\n  \"subject\": \"CS999 ทดสอบ API (แก้ไข)\",\n  \"teacher_name\": \"อ. ทดสอบ ระบบ\",\n  \"day_of_week\": 1,\n  \"start_time\": \"08:00\",\n  \"end_time\": \"10:00\",\n  \"semester\": \"1/2567\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "05. Delete Schedule",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/schedules/{{last_schedule_id}}",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "schedules",
+                "{{last_schedule_id}}"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Flow 8 — Admin: Users & Roles",
+      "description": "ทดสอบการจัดการผู้ใช้และ roles — ต้อง Login as Admin\nลำดับ: 1 → 2 → 3 → 4 → 5 → 6 → 7",
+      "item": [
+        {
+          "name": "01. List All Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/users?role_id=2&search=",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "role_id",
+                  "value": "2",
+                  "description": "(optional) กรอง role"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "(optional) ค้นหาจาก fullname/email/username"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "02. Create User (Admin creates)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/users",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "users"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"newteacher_postman@silpakorn.edu\",\n  \"password\": \"password123\",\n  \"fullname\": \"อาจารย์ทดสอบ Postman\",\n  \"username\": \"newteacher_postman\",\n  \"role_id\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "if (r.success && r.data && r.data.user_id) {",
+                  "  pm.environment.set(\"last_target_user_id\", r.data.user_id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03. Get User By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/users/{{last_target_user_id}}",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "users",
+                "{{last_target_user_id}}"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "04. Update User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/users/{{last_target_user_id}}",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "users",
+                "{{last_target_user_id}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullname\": \"อาจารย์ทดสอบ Postman (ปรับปรุง)\",\n  \"role_id\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "05. Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/users/{{last_target_user_id}}",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "users",
+                "{{last_target_user_id}}"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "06. List All Roles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/roles",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "roles"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "07. Create Role",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/roles",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "roles"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role_name\": \"test_role\",\n  \"description\": \"Role สำหรับทดสอบ\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "if (r.success && r.data && r.data.role_id) {",
+                  "  pm.environment.set(\"last_role_id\", r.data.role_id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "08. Update Role",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/roles/{{last_role_id}}",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "roles",
+                "{{last_role_id}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"อัพเดท description\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "09. Delete Role",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/roles/{{last_role_id}}",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "roles",
+                "{{last_role_id}}"
+              ]
+            },
+            "description": "ลบไม่ได้ถ้ายังมี user ใช้อยู่"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Flow 9 — Notifications",
+      "description": "ทดสอบการดูและจัดการการแจ้งเตือน\nต้องมีการจองมาก่อนเพื่อให้มี notification เกิดขึ้น\nลำดับ: 1 → 2 → 3 → 4",
+      "item": [
+        {
+          "name": "01. Get My Notifications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/notifications/my?limit=20&unread_only=false",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "notifications",
+                "my"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "จำนวนสูงสุด"
+                },
+                {
+                  "key": "unread_only",
+                  "value": "false",
+                  "description": "true = เฉพาะที่ยังไม่อ่าน"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "if (r.success && r.data && r.data.notifications && r.data.notifications.length > 0) {",
+                  "  pm.environment.set(\"last_notification_id\", r.data.notifications[0].notification_id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02. Mark One as Read",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/notifications/{{last_notification_id}}/read",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "notifications",
+                "{{last_notification_id}}",
+                "read"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "03. Mark All as Read",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/notifications/read-all",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "notifications",
+                "read-all"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "04. Delete Notification",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/notifications/{{last_notification_id}}",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "notifications",
+                "{{last_notification_id}}"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Flow 10 — Test (Email & Health)",
+      "description": "ทดสอบ utility endpoints",
+      "item": [
+        {
+          "name": "01. Send Test Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_version}}/test/email",
+              "host": [
+                "{{base_url}}{{api_version}}"
+              ],
+              "path": [
+                "test",
+                "email"
+              ]
+            },
+            "description": "ส่ง email ทดสอบไปยังที่อยู่ที่ระบุ — ต้องตั้งค่า SMTP ใน backend ก่อน",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"your_email@example.com\",\n  \"subject\": \"ทดสอบระบบส่งอีเมล\",\n  \"message\": \"ถ้าได้รับอีเมลนี้แสดงว่า SMTP ทำงานปกติ\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000"
+    },
+    {
+      "key": "api_version",
+      "value": "/api/v1"
+    }
+  ]
+}

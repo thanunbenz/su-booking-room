@@ -1,0 +1,151 @@
+{
+  "id": "su-booking-room-flow-env",
+  "name": "SU Booking Room - Flow Tests (Local)",
+  "values": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "api_version",
+      "value": "/api/v1",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "admin_email",
+      "value": "admin@silpakorn.edu",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "admin_password",
+      "value": "password123",
+      "type": "secret",
+      "enabled": true
+    },
+    {
+      "key": "teacher_email",
+      "value": "teacher1@silpakorn.edu",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "teacher_password",
+      "value": "password123",
+      "type": "secret",
+      "enabled": true
+    },
+    {
+      "key": "visitor_email",
+      "value": "visitor@silpakorn.edu",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "visitor_password",
+      "value": "password123",
+      "type": "secret",
+      "enabled": true
+    },
+    {
+      "key": "admin_access_token",
+      "value": "",
+      "type": "secret",
+      "enabled": true
+    },
+    {
+      "key": "admin_refresh_token",
+      "value": "",
+      "type": "secret",
+      "enabled": true
+    },
+    {
+      "key": "admin_user_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "user_access_token",
+      "value": "",
+      "type": "secret",
+      "enabled": true
+    },
+    {
+      "key": "user_refresh_token",
+      "value": "",
+      "type": "secret",
+      "enabled": true
+    },
+    {
+      "key": "user_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "last_building_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "last_room_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "last_booking_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "last_schedule_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "last_target_user_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "last_role_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "last_notification_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "date_tomorrow",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "date_next_week",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "date_next_week_plus_2",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    }
+  ],
+  "_postman_variable_scope": "environment"
+}
