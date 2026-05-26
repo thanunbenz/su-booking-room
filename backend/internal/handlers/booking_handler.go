@@ -217,7 +217,7 @@ func (h *BookingHandler) Create(c *fiber.Ctx) error {
 
 	// Parse body
 	if err := c.BodyParser(&input); err != nil {
-		return utils.BadRequestResponse(c, "Invalid request body")
+		return utils.BadRequestResponse(c, "Invalid request body: "+err.Error())
 	}
 
 	// ดึง userID จาก JWT token
@@ -481,7 +481,7 @@ func (h *BookingHandler) RequestCancellation(c *fiber.Ctx) error {
 		Reason string `json:"reason"`
 	}
 	if err := c.BodyParser(&input); err != nil {
-		return utils.BadRequestResponse(c, "Invalid request body")
+		return utils.BadRequestResponse(c, "Invalid request body " + err.Error())
 	}
 
 	now := time.Now()
@@ -510,7 +510,7 @@ func (h *BookingHandler) ConfirmCancellation(c *fiber.Ctx) error {
 	userID := int(c.Locals("user_id").(uint))
 
 	booking, err := h.loadBookingPendingCancellation(c, id, userID)
-	if err != nil {
+	if err != nil || booking == nil {
 		return err
 	}
 
@@ -539,7 +539,7 @@ func (h *BookingHandler) RejectCancellation(c *fiber.Ctx) error {
 	userID := int(c.Locals("user_id").(uint))
 
 	booking, err := h.loadBookingPendingCancellation(c, id, userID)
-	if err != nil {
+	if err != nil || booking == nil {
 		return err
 	}
 

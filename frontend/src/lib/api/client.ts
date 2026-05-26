@@ -413,6 +413,37 @@ export const bookingApi = {
   },
 
   /**
+   * Request cancellation (Admin) — ขอให้เจ้าของยกเลิก, booking → pending_cancellation
+   */
+  requestCancellation: async (
+    id: number,
+    reason: string
+  ): Promise<ApiResponse<Booking>> => {
+    return apiCall(`/bookings/${id}/cancellation/request`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    })
+  },
+
+  /**
+   * Confirm cancellation (Owner) — ยืนยันยกเลิกตามคำขอแอดมิน, booking → cancelled
+   */
+  confirmCancellation: async (id: number): Promise<ApiResponse<Booking>> => {
+    return apiCall(`/bookings/${id}/cancellation/confirm`, {
+      method: 'POST',
+    })
+  },
+
+  /**
+   * Reject cancellation (Owner) — ปฏิเสธคำขอยกเลิก, คืนสถานะเดิม
+   */
+  rejectCancellation: async (id: number): Promise<ApiResponse<Booking>> => {
+    return apiCall(`/bookings/${id}/cancellation/reject`, {
+      method: 'POST',
+    })
+  },
+
+  /**
    * Delete booking (Admin only)
    */
   delete: async (id: number): Promise<ApiResponse<null>> => {

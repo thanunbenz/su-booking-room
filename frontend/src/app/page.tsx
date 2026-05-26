@@ -31,13 +31,33 @@ export default function Home() {
           buildingApi.getAll(),
           roomApi.getAll(),
           scheduleApi.getAll(),
-          bookingApi.getAll({ booking_date: selectedDateString }),
+          // Public endpoint: approved-only, PII stripped, multi-day aware.
+          // The home board is visible to everyone (incl. logged-out), so it must
+          // not call the admin-only GET /bookings.
+          bookingApi.getPublicCalendar({ from: selectedDateString, to: selectedDateString }),
         ]);
 
         setBuildings(buildingsRes.data);
         setRooms(roomsRes.data);
         setSchedules(schedulesRes.data);
-        setBooking(bookingApiRes.data);
+        setBooking(
+          bookingApiRes.data.map((b) => ({
+            booking_id: b.booking_id,
+            user_id: 0,
+            room_id: b.room_id,
+            title: b.title,
+            detail: '',
+            equipment_request: '',
+            booking_date: b.booking_date,
+            end_date: b.end_date,
+            start_time: b.start_time,
+            end_time: b.end_time,
+            status: b.status as Booking['status'],
+            status_note: '',
+            created_at: '',
+            updated_at: '',
+          }))
+        );
       } catch (err) {
         console.error('Error fetching data:', err);
         const errorMessage = (err as { error?: { message?: string } })?.error?.message;
@@ -118,14 +138,12 @@ export default function Home() {
     // Filter schedules for selected day
     const daySchedules = schedules.filter((s) => s.day_of_week === selectedDayOfWeek);
 
-    // Filter bookings for selected date and approved/pending status
+    // Filter approved bookings whose date range covers the selected date
+    // (range-aware so multi-day bookings spanning the day still appear).
     const dayBookings = booking.filter((b) => {
-      // แปลง booking_date ให้เป็น YYYY-MM-DD เพื่อเปรียบเทียบ
-      const bookingDateStr = b.booking_date.split('T')[0];
-      return (
-        bookingDateStr === selectedDateStr &&
-        (b.status === 'approved')
-      );
+      const startStr = b.booking_date.split('T')[0];
+      const endStr = (b.end_date || b.booking_date).split('T')[0];
+      return startStr <= selectedDateStr && endStr >= selectedDateStr && b.status === 'approved';
     });
 
     // Group by building
@@ -223,8 +241,6 @@ export default function Home() {
 
     return grouped;
   };
-
-  console.log(booking);
 
   return (
     <MainLayout>
@@ -332,8 +348,6 @@ export default function Home() {
                             const isSchedule = item.type === 'schedule';
                             const data = item.data;
 
-                            console.log('Rendering item:', item);
-
                             // Determine styling based on type
                             const rowBgClass = isSchedule
                               ? 'bg-blue-50/30 dark:bg-blue-900/10'
@@ -395,7 +409,7 @@ export default function Home() {
                                   <div className="text-sm text-gray-700 dark:text-gray-300">
                                     {isSchedule
                                       ? (data as FixedSchedule).teacher_name
-                                      : (data as Booking).user?.fullname || `ผู้ใช้ ID: ${(data as Booking).user_id}`
+                                      : (data as Booking).user?.fullname || '-'
                                     }
                                   </div>
                                 </td>

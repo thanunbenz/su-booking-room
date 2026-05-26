@@ -129,7 +129,13 @@ export interface BulkCreateScheduleRequest {
 
 // === Booking Types ===
 
-export type BookingStatus = 'pending' | 'approved' | 'rejected' | 'cancelled' | 'completed'
+export type BookingStatus =
+  | 'pending'
+  | 'approved'
+  | 'rejected'
+  | 'cancelled'
+  | 'completed'
+  | 'pending_cancellation'
 
 export interface Booking {
   booking_id: number
@@ -144,6 +150,9 @@ export interface Booking {
   end_time: string // HH:MM
   status: BookingStatus
   status_note: string
+  previous_status?: string // สถานะก่อนขอยกเลิก (ใช้ตอน reject คำขอ)
+  cancellation_requested_at?: string
+  cancellation_requested_by?: number // admin user_id
   created_at: string
   updated_at: string
   user?: User // Optional because it's only included when preloaded

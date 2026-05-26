@@ -6,7 +6,7 @@ import MainLayout from '@/components/layout/MainLayout';
 import Link from 'next/link';
 import { bookingApi, roomApi, buildingApi } from '@/lib/api/client';
 import { Booking, Room, Building, User, BookingStatus } from '@/lib/api/types';
-import { TbCalendar, TbCheck, TbX, TbTrash, TbUser, TbFilter, TbEye, TbClock, TbMapPin, TbPrinter } from 'react-icons/tb';
+import { TbCalendar, TbCheck, TbX, TbTrash, TbUser, TbFilter, TbEye, TbClock, TbMapPin, TbPrinter, TbBan } from 'react-icons/tb';
 import { HiOutlineOfficeBuilding } from 'react-icons/hi';
 import {
   downloadBookingPDF,
@@ -172,6 +172,21 @@ function ManageBookingsPage() {
     await handleUpdateStatus(bookingId, 'rejected', reason || 'ปฏิเสธโดยแอดมิน');
   };
 
+  const handleRequestCancellation = async (bookingId: number) => {
+    const reason = prompt('เหตุผลในการขอยกเลิก (จะส่งให้ผู้จองยืนยัน):');
+    if (reason === null) return; // User cancelled
+    try {
+      setUpdating(bookingId);
+      await bookingApi.requestCancellation(bookingId, reason || 'ขอยกเลิกโดยแอดมิน');
+      await fetchData();
+      alert('ส่งคำขอยกเลิกแล้ว รอผู้จองยืนยัน');
+    } catch (err: any) {
+      alert(err?.error?.message || 'ไม่สามารถส่งคำขอยกเลิกได้');
+    } finally {
+      setUpdating(null);
+    }
+  };
+
   const handleDelete = async (bookingId: number) => {
     if (!confirm('คุณต้องการลบการจองนี้หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้')) {
       return;
@@ -214,6 +229,10 @@ function ManageBookingsPage() {
       rejected: {
         label: 'ปฏิเสธ',
         className: 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400',
+      },
+      pending_cancellation: {
+        label: 'รอยืนยันการยกเลิก',
+        className: 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400',
       },
       cancelled: {
         label: 'ยกเลิกแล้ว',
@@ -307,6 +326,7 @@ function ManageBookingsPage() {
                 <option value="pending">รอการอนุมัติ</option>
                 <option value="approved">อนุมัติแล้ว</option>
                 <option value="rejected">ปฏิเสธ</option>
+                <option value="pending_cancellation">รอยืนยันการยกเลิก</option>
                 <option value="cancelled">ยกเลิกแล้ว</option>
                 <option value="completed">เสร็จสิ้น</option>
               </select>
@@ -551,6 +571,22 @@ function ManageBookingsPage() {
                         <TbPrinter className="w-4 h-4" />
                         {printing === booking.booking_id ? 'กำลังสร้าง...' : 'พิมพ์ PDF'}
                       </button>
+                    )}
+                    {(booking.status === 'pending' || booking.status === 'approved') && (
+                      <button
+                        onClick={() => handleRequestCancellation(booking.booking_id)}
+                        disabled={updating === booking.booking_id}
+                        className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap justify-center"
+                      >
+                        <TbBan className="w-4 h-4" />
+                        {updating === booking.booking_id ? 'กำลังส่ง...' : 'ขอยกเลิก'}
+                      </button>
+                    )}
+                    {booking.status === 'pending_cancellation' && (
+                      <span className="px-4 py-2 text-sm text-orange-700 dark:text-orange-400 whitespace-nowrap flex items-center gap-2">
+                        <TbClock className="w-4 h-4" />
+                        รอผู้จองยืนยัน
+                      </span>
                     )}
                     <button
                       onClick={() => handleDelete(booking.booking_id)}

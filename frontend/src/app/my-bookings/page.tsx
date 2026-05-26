@@ -7,7 +7,7 @@ import { withRole } from '@/lib/withRole';
 import MainLayout from '@/components/layout/MainLayout';
 import { bookingApi, roomApi, buildingApi } from '@/lib/api/client';
 import { Booking, Room, Building } from '@/lib/api/types';
-import { TbCalendar, TbClock, TbMapPin, TbFileText, TbX, TbEye, TbUser, TbPrinter } from 'react-icons/tb';
+import { TbCalendar, TbClock, TbMapPin, TbFileText, TbX, TbEye, TbUser, TbPrinter, TbCheck } from 'react-icons/tb';
 import { HiOutlineOfficeBuilding } from 'react-icons/hi';
 import { useAuth } from '@/contexts/AuthContext';
 import { downloadBookingPDF } from '@/lib/downloadBookingPDF';
@@ -25,6 +25,7 @@ function MyBookingsPage() {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [cancelling, setCancelling] = useState<number | null>(null);
   const [printing, setPrinting] = useState<number | null>(null);
+  const [processingCancellation, setProcessingCancellation] = useState<number | null>(null);
 
   useEffect(() => {
     // Only fetch if we have a token (authenticated)
@@ -90,6 +91,40 @@ function MyBookingsPage() {
     }
   };
 
+  const handleConfirmCancellation = async (bookingId: number) => {
+    if (!confirm('ยืนยันการยกเลิกตามคำขอของแอดมิน? การจองจะถูกยกเลิก')) {
+      return;
+    }
+    try {
+      setProcessingCancellation(bookingId);
+      await bookingApi.confirmCancellation(bookingId);
+      const bookingsRes = await bookingApi.getMyBookings();
+      setBookings(bookingsRes.data);
+      alert('ยืนยันการยกเลิกแล้ว');
+    } catch (err: any) {
+      alert(err?.error?.message || 'ไม่สามารถยืนยันการยกเลิกได้');
+    } finally {
+      setProcessingCancellation(null);
+    }
+  };
+
+  const handleRejectCancellation = async (bookingId: number) => {
+    if (!confirm('ปฏิเสธคำขอยกเลิก? การจองจะยังคงมีผล')) {
+      return;
+    }
+    try {
+      setProcessingCancellation(bookingId);
+      await bookingApi.rejectCancellation(bookingId);
+      const bookingsRes = await bookingApi.getMyBookings();
+      setBookings(bookingsRes.data);
+      alert('ปฏิเสธคำขอยกเลิกแล้ว การจองยังคงมีผล');
+    } catch (err: any) {
+      alert(err?.error?.message || 'ไม่สามารถปฏิเสธคำขอยกเลิกได้');
+    } finally {
+      setProcessingCancellation(null);
+    }
+  };
+
   const getRoomName = (roomId: number) => {
     const room = rooms.find((r) => r.room_id === roomId);
     return room ? room.name : 'ไม่ระบุ';
@@ -115,6 +150,10 @@ function MyBookingsPage() {
       rejected: {
         label: 'ปฏิเสธ',
         className: 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400',
+      },
+      pending_cancellation: {
+        label: 'รอยืนยันการยกเลิก',
+        className: 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400',
       },
       cancelled: {
         label: 'ยกเลิกแล้ว',
@@ -207,6 +246,7 @@ function MyBookingsPage() {
             <option value="pending">รอการอนุมัติ</option>
             <option value="approved">อนุมัติแล้ว</option>
             <option value="rejected">ปฏิเสธ</option>
+            <option value="pending_cancellation">รอยืนยันการยกเลิก</option>
             <option value="cancelled">ยกเลิกแล้ว</option>
             <option value="completed">เสร็จสิ้น</option>
           </select>
@@ -320,6 +360,27 @@ function MyBookingsPage() {
                         <TbX className="w-4 h-4" />
                         {cancelling === booking.booking_id ? 'กำลังยกเลิก...' : 'ยกเลิกการจอง'}
                       </button>
+                    )}
+
+                    {booking.status === 'pending_cancellation' && (
+                      <>
+                        <button
+                          onClick={() => handleConfirmCancellation(booking.booking_id)}
+                          disabled={processingCancellation === booking.booking_id}
+                          className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap justify-center"
+                        >
+                          <TbCheck className="w-4 h-4" />
+                          {processingCancellation === booking.booking_id ? 'กำลังดำเนินการ...' : 'ยืนยันยกเลิก'}
+                        </button>
+                        <button
+                          onClick={() => handleRejectCancellation(booking.booking_id)}
+                          disabled={processingCancellation === booking.booking_id}
+                          className="px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-600 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap justify-center"
+                        >
+                          <TbX className="w-4 h-4" />
+                          {processingCancellation === booking.booking_id ? 'กำลังดำเนินการ...' : 'ปฏิเสธคำขอ'}
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>
