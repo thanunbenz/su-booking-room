@@ -334,6 +334,8 @@ func thaiStatusShort(s string) string {
 		return "อนุมัติ"
 	case "rejected":
 		return "ปฏิเสธ"
+	case "pending_cancellation":
+		return "รอยืนยันยกเลิก"
 	case "cancelled":
 		return "ยกเลิก"
 	case "completed":

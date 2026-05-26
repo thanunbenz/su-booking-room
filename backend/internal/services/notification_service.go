@@ -107,6 +107,27 @@ func (s *NotificationService) NotifyBookingRejected(bookingID int, reason string
 	return nil
 }
 
+// NotifyCancellationRequested - แจ้งผู้จองเมื่อแอดมินขอยกเลิก (รอยืนยัน)
+func (s *NotificationService) NotifyCancellationRequested(bookingID int, reason string) error {
+	booking, err := s.getBookingDetails(bookingID)
+	if err != nil {
+		return fmt.Errorf("failed to get booking details: %w", err)
+	}
+
+	message := fmt.Sprintf("แอดมินขอยกเลิกการจองห้อง %s วันที่ %s เวลา %s-%s กรุณายืนยันหรือปฏิเสธที่หน้าการจองของฉัน",
+		booking.Room.Name,
+		utils.FormatDateRange(booking.BookingDate.Time, booking.EndDate.Time),
+		booking.StartTime,
+		booking.EndTime,
+	)
+	if reason != "" {
+		message += fmt.Sprintf(" — เหตุผล: %s", reason)
+	}
+
+	_, err = s.createNotification(booking.UserID, bookingID, "booking_cancellation_requested", message)
+	return err
+}
+
 // NotifyBookingCancelled - แจ้งเตือนเมื่อการจองถูกยกเลิก
 func (s *NotificationService) NotifyBookingCancelled(bookingID int, reason string) error {
 	booking, err := s.getBookingDetails(bookingID)
@@ -226,11 +247,12 @@ func (s *NotificationService) sendBookingEmail(notificationID int, booking *mode
 func (s *NotificationService) prepareEmailData(booking *models.Booking) map[string]interface{} {
 	// กำหนดข้อความสถานะ
 	statusText := map[string]string{
-		"pending":   "รอการอนุมัติ",
-		"approved":  "อนุมัติแล้ว",
-		"rejected":  "ปฏิเสธ",
-		"cancelled": "ยกเลิกแล้ว",
-		"completed": "เสร็จสิ้น",
+		"pending":                "รอการอนุมัติ",
+		"approved":               "อนุมัติแล้ว",
+		"rejected":               "ปฏิเสธ",
+		"cancelled":              "ยกเลิกแล้ว",
+		"completed":              "เสร็จสิ้น",
+		"pending_cancellation":   "รอยืนยันการยกเลิก",
 	}
 
 	roomName := "ไม่ระบุ"

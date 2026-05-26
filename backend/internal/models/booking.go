@@ -81,7 +81,7 @@ func (cd *CustomDate) Scan(value interface{}) error {
 	}
 }
 
-// Booking status: pending, approved, rejected, cancelled, completed
+// Booking status: pending, approved, rejected, cancelled, completed, pending_cancellation
 type Booking struct {
 	BookingID        int        `gorm:"primaryKey;autoIncrement" json:"booking_id"`
 	UserID           int        `gorm:"not null;index" json:"user_id"`
@@ -93,8 +93,11 @@ type Booking struct {
 	EndDate          CustomDate `gorm:"type:date;not null;index" json:"end_date" validate:"required"`                        // วันสิ้นสุด (inclusive); จองวันเดียวให้เท่ากับ booking_date
 	StartTime        string     `gorm:"type:time;not null;index:idx_room_date_time" json:"start_time" validate:"required"`   // เวลาเริ่ม (ใช้กับทุกวันในช่วง)
 	EndTime          string     `gorm:"type:time;not null" json:"end_time" validate:"required"`                              // เวลาสิ้นสุด (ใช้กับทุกวันในช่วง)
-	Status           string     `gorm:"type:varchar(20);not null;default:'approved';index" json:"status" validate:"omitempty,oneof=pending approved rejected cancelled completed"`
+	Status           string     `gorm:"type:varchar(30);not null;default:'approved';index" json:"status" validate:"omitempty,oneof=pending approved rejected cancelled completed pending_cancellation"`
 	StatusNote       string     `gorm:"type:text" json:"status_note" validate:"omitempty,max=1000"` // เหตุผลการยกเลิก/ปฏิเสธ หรือหมายเหตุอื่นๆ
+	PreviousStatus   string     `gorm:"type:varchar(30)" json:"previous_status,omitempty"`          // สถานะก่อนขอยกเลิก (ใช้เมื่อ reject คำขอยกเลิก)
+	CancellationRequestedAt *time.Time `gorm:"index" json:"cancellation_requested_at,omitempty"`
+	CancellationRequestedBy *int       `gorm:"index" json:"cancellation_requested_by,omitempty"` // admin user_id
 	CreatedAt        time.Time  `gorm:"default:now()" json:"created_at"`
 	UpdatedAt        time.Time  `gorm:"default:now()" json:"updated_at"`
 
@@ -107,17 +110,28 @@ func (Booking) TableName() string {
 	return "bookings"
 }
 
+// BookingStatusesOccupyingRoom — การจองที่ยังถือสิทธิ์ใช้ห้อง (รวมรอยืนยันยกเลิก)
+var BookingStatusesOccupyingRoom = []string{"pending", "approved", "pending_cancellation"}
+
 // Validation: ตรวจสอบว่า status ถูกต้อง
 func (b *Booking) BeforeSave(tx *gorm.DB) error {
 	validStatuses := map[string]bool{
-		"pending":   true,
-		"approved":  true,
-		"rejected":  true,
-		"cancelled": true,
-		"completed": true,
+		"pending":                true,
+		"approved":               true,
+		"rejected":               true,
+		"cancelled":              true,
+		"completed":              true,
+		"pending_cancellation":   true,
 	}
 	if !validStatuses[b.Status] {
 		return gorm.ErrInvalidData
 	}
 	return nil
+}
+
+// ClearCancellationRequest resets admin cancellation request metadata.
+func (b *Booking) ClearCancellationRequest() {
+	b.PreviousStatus = ""
+	b.CancellationRequestedAt = nil
+	b.CancellationRequestedBy = nil
 }

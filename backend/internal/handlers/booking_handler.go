@@ -23,6 +23,7 @@ type NotificationService interface {
 	NotifyBookingApproved(bookingID int) error
 	NotifyBookingRejected(bookingID int, reason string) error
 	NotifyBookingCancelled(bookingID int, reason string) error
+	NotifyCancellationRequested(bookingID int, reason string) error
 }
 
 func NewBookingHandler(db *gorm.DB, notifService NotificationService) *BookingHandler {
@@ -154,7 +155,9 @@ func (h *BookingHandler) GetByRoomAndDate(c *fiber.Ctx) error {
 	date := c.Query("date") // format: YYYY-MM-DD
 
 	var bookings []models.Booking
-	query := h.DB.Preload("User.Role").Where("room_id = ? AND status IN (?, ?)", roomID, "pending", "approved").Order("start_time ASC")
+	query := h.DB.Preload("User.Role").
+		Where("room_id = ? AND status IN ?", roomID, models.BookingStatusesOccupyingRoom).
+		Order("start_time ASC")
 
 	// Filter by date if provided
 	if date != "" {
@@ -290,7 +293,7 @@ func (h *BookingHandler) Create(c *fiber.Ctx) error {
 	// Time overlap:  a.start_time < b.end_time AND a.end_time > b.start_time
 	var conflictCount int64
 	h.DB.Model(&models.Booking{}).
-		Where("room_id = ? AND status IN (?, ?)", input.RoomID, "pending", "approved").
+		Where("room_id = ? AND status IN ?", input.RoomID, models.BookingStatusesOccupyingRoom).
 		Where("booking_date <= ? AND end_date >= ?", input.EndDate.Time, input.BookingDate.Time).
 		Where("start_time < ? AND end_time > ?", input.EndTime, input.StartTime).
 		Count(&conflictCount)
@@ -361,15 +364,25 @@ func (h *BookingHandler) UpdateStatus(c *fiber.Ctx) error {
 		"pending":   true,
 		"approved":  true,
 		"rejected":  true,
-		"cancelled": true,
 		"completed": true,
 	}
 	if !validStatuses[input.Status] {
 		return utils.BadRequestResponse(c, "Invalid status")
 	}
 
+	// Admin ยกเลิกต้องผ่าน flow ขอความยินยอมผู้จองก่อน
+	if input.Status == "cancelled" {
+		return utils.BadRequestResponse(c,
+			"ไม่สามารถตั้งสถานะ cancelled โดยตรง กรุณาใช้ POST /bookings/:id/cancellation/request")
+	}
+	if input.Status == "pending_cancellation" {
+		return utils.BadRequestResponse(c,
+			"ไม่สามารถตั้งสถานะ pending_cancellation โดยตรง กรุณาใช้ POST /bookings/:id/cancellation/request")
+	}
+
 	// Update
 	booking.Status = input.Status
+	booking.ClearCancellationRequest()
 	booking.StatusNote = input.StatusNote
 	booking.UpdatedAt = time.Now()
 
@@ -413,14 +426,21 @@ func (h *BookingHandler) Cancel(c *fiber.Ctx) error {
 		return utils.ForbiddenResponse(c, "You can only cancel your own bookings")
 	}
 
-	// ตรวจสอบว่ายกเลิกได้หรือไม่ (เฉพาะ pending หรือ approved)
-	if booking.Status != "pending" && booking.Status != "approved" {
+	// ตรวจสอบว่ายกเลิกได้หรือไม่
+	switch booking.Status {
+	case "pending", "approved":
+		// ยกเลิกทันที (ผู้จองเอง)
+	case "pending_cancellation":
+		return utils.BadRequestResponse(c,
+			"มีคำขอยกเลิกจากแอดมินรออยู่ กรุณาใช้ POST /bookings/:id/cancellation/confirm หรือ /cancellation/reject")
+	default:
 		return utils.BadRequestResponse(c, "Cannot cancel booking with status: "+booking.Status)
 	}
 
 	// Update status to cancelled
 	booking.Status = "cancelled"
 	booking.StatusNote = "Cancelled by user"
+	booking.ClearCancellationRequest()
 	booking.UpdatedAt = time.Now()
 
 	if err := h.DB.Save(&booking).Error; err != nil {
@@ -433,6 +453,129 @@ func (h *BookingHandler) Cancel(c *fiber.Ctx) error {
 	}
 
 	return utils.StandardResponse(c, fiber.StatusOK, booking, "Booking cancelled successfully")
+}
+
+// RequestCancellation - POST /bookings/:id/cancellation/request (Admin)
+// ขอยกเลิก — ต้องรอผู้จองยืนยันก่อนจึงจะ cancelled จริง
+func (h *BookingHandler) RequestCancellation(c *fiber.Ctx) error {
+	id, _ := strconv.Atoi(c.Params("id"))
+	adminID := int(c.Locals("user_id").(uint))
+
+	var booking models.Booking
+	if err := h.DB.Preload("User.Role").Preload("Room.Building").
+		First(&booking, "booking_id = ?", id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return utils.NotFoundResponse(c, "Booking not found")
+		}
+		return utils.InternalServerErrorResponse(c, err.Error())
+	}
+
+	if booking.Status == "pending_cancellation" {
+		return utils.ConflictResponse(c, "มีคำขอยกเลิกรอการยืนยันอยู่แล้ว")
+	}
+	if booking.Status != "pending" && booking.Status != "approved" {
+		return utils.BadRequestResponse(c, "ขอยกเลิกได้เฉพาะการจองที่รออนุมัติหรืออนุมัติแล้ว (สถานะปัจจุบัน: "+booking.Status+")")
+	}
+
+	var input struct {
+		Reason string `json:"reason"`
+	}
+	if err := c.BodyParser(&input); err != nil {
+		return utils.BadRequestResponse(c, "Invalid request body")
+	}
+
+	now := time.Now()
+	booking.PreviousStatus = booking.Status
+	booking.Status = "pending_cancellation"
+	booking.StatusNote = input.Reason
+	booking.CancellationRequestedAt = &now
+	booking.CancellationRequestedBy = &adminID
+	booking.UpdatedAt = now
+
+	if err := h.DB.Save(&booking).Error; err != nil {
+		return utils.InternalServerErrorResponse(c, err.Error())
+	}
+
+	if h.NotifService != nil {
+		go h.NotifService.NotifyCancellationRequested(booking.BookingID, input.Reason)
+	}
+
+	return utils.StandardResponse(c, fiber.StatusOK, booking,
+		"ส่งคำขอยกเลิกแล้ว รอผู้จองยืนยัน")
+}
+
+// ConfirmCancellation - POST /bookings/:id/cancellation/confirm (เจ้าของการจอง)
+func (h *BookingHandler) ConfirmCancellation(c *fiber.Ctx) error {
+	id, _ := strconv.Atoi(c.Params("id"))
+	userID := int(c.Locals("user_id").(uint))
+
+	booking, err := h.loadBookingPendingCancellation(c, id, userID)
+	if err != nil {
+		return err
+	}
+
+	reason := booking.StatusNote
+	booking.Status = "cancelled"
+	if reason == "" {
+		booking.StatusNote = "ยกเลิกตามคำขอของแอดมิน (ผู้จองยืนยันแล้ว)"
+	}
+	booking.ClearCancellationRequest()
+	booking.UpdatedAt = time.Now()
+
+	if err := h.DB.Save(&booking).Error; err != nil {
+		return utils.InternalServerErrorResponse(c, err.Error())
+	}
+
+	if h.NotifService != nil {
+		go h.NotifService.NotifyBookingCancelled(booking.BookingID, booking.StatusNote)
+	}
+
+	return utils.StandardResponse(c, fiber.StatusOK, booking, "ยืนยันการยกเลิกแล้ว")
+}
+
+// RejectCancellation - POST /bookings/:id/cancellation/reject (เจ้าของการจอง)
+func (h *BookingHandler) RejectCancellation(c *fiber.Ctx) error {
+	id, _ := strconv.Atoi(c.Params("id"))
+	userID := int(c.Locals("user_id").(uint))
+
+	booking, err := h.loadBookingPendingCancellation(c, id, userID)
+	if err != nil {
+		return err
+	}
+
+	restore := booking.PreviousStatus
+	if restore == "" {
+		restore = "approved"
+	}
+	booking.Status = restore
+	booking.StatusNote = ""
+	booking.ClearCancellationRequest()
+	booking.UpdatedAt = time.Now()
+
+	if err := h.DB.Save(&booking).Error; err != nil {
+		return utils.InternalServerErrorResponse(c, err.Error())
+	}
+
+	return utils.StandardResponse(c, fiber.StatusOK, booking, "ปฏิเสธคำขอยกเลิกแล้ว การจองยังคงมีผล")
+}
+
+func (h *BookingHandler) loadBookingPendingCancellation(c *fiber.Ctx, id, userID int) (*models.Booking, error) {
+	var booking models.Booking
+	if err := h.DB.Preload("User.Role").Preload("Room.Building").
+		First(&booking, "booking_id = ?", id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, utils.NotFoundResponse(c, "Booking not found")
+		}
+		return nil, utils.InternalServerErrorResponse(c, err.Error())
+	}
+
+	if booking.UserID != userID {
+		return nil, utils.ForbiddenResponse(c, "เฉพาะเจ้าของการจองเท่านั้นที่ยืนยันหรือปฏิเสธคำขอยกเลิกได้")
+	}
+	if booking.Status != "pending_cancellation" {
+		return nil, utils.BadRequestResponse(c, "ไม่มีคำขอยกเลิกที่รอการยืนยัน")
+	}
+	return &booking, nil
 }
 
 // Delete - DELETE /bookings/:id (Admin only - ลบการจอง)

@@ -80,8 +80,13 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, notifService *services.Notificatio
 	// PATCH routes
 	bookings.Patch("/:id/status", middleware.AuthMiddleware, middleware.AdminOnly, bookingHandler.UpdateStatus) // Admin only - อนุมัติ/ปฏิเสธ
 
+	// Admin cancellation consent flow
+	bookings.Post("/:id/cancellation/request", middleware.AuthMiddleware, middleware.AdminOnly, bookingHandler.RequestCancellation)
+	bookings.Post("/:id/cancellation/confirm", middleware.AuthMiddleware, bookingHandler.ConfirmCancellation)
+	bookings.Post("/:id/cancellation/reject", middleware.AuthMiddleware, bookingHandler.RejectCancellation)
+
 	// DELETE routes - specific paths before generic :id
-	bookings.Delete("/:id/cancel", middleware.AuthMiddleware, bookingHandler.Cancel)                            // User - ยกเลิกการจอง
+	bookings.Delete("/:id/cancel", middleware.AuthMiddleware, bookingHandler.Cancel)                            // User - ยกเลิกการจองทันที (เจ้าของ)
 	bookings.Delete("/:id", middleware.AuthMiddleware, middleware.AdminOnly, bookingHandler.Delete)             // Admin only - ลบการจอง
 
 	// User routes (Admin only)
